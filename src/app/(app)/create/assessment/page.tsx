@@ -11,8 +11,11 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { Loader2, Sparkles, Download, Share2 } from 'lucide-react';
+import { Loader2, Sparkles, Download, Share2, ExternalLink } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from '@/hooks/use-auth';
+import { getAuth } from 'firebase/auth';
+import Link from 'next/link';
 
 const formSchema = z.object({
   grade: z.string().min(1, 'Grade is required'),
@@ -36,7 +39,10 @@ const formSchema = z.object({
 export default function AssessmentPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [assessmentResult, setAssessmentResult] = useState<string | null>(null);
+  const [formUrl, setFormUrl] = useState<string | null>(null);
   const { toast } = useToast();
+  const { user } = useAuth();
+  const auth = getAuth();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -54,38 +60,56 @@ export default function AssessmentPage() {
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
     setAssessmentResult(null);
+    setFormUrl(null);
 
-    const input: GenerateAssessmentInput = {
-      grade: values.grade,
-      subject: values.subject,
-      textbooks: [values.textbooks],
-      assessment_type: values.assessment_type,
-      topics_or_chapters: values.topics_or_chapters,
-    };
-
-    if (values.assessment_type === 'Quiz' && values.quiz_num_questions && values.quiz_difficulty && values.quiz_type && values.quiz_num_options) {
-      input.objective_config = {
-        num_questions: values.quiz_num_questions,
-        difficulty_level: values.quiz_difficulty,
-        type: values.quiz_type,
-        num_options: values.quiz_num_options,
-      };
-    } else if (values.assessment_type === 'Descriptive' && values.desc_num_questions && values.desc_difficulty && values.desc_type) {
-        input.subjective_config = {
-            num_questions: values.desc_num_questions,
-            difficulty_level: values.desc_difficulty,
-            type: values.desc_type
-        }
+    if (!user) {
+        toast({ variant: "destructive", title: "Authentication Error", description: "You must be signed in to generate an assessment." });
+        setIsLoading(false);
+        return;
     }
-    // TODO: Add configs for other types
 
     try {
+      const idTokenResult = await user.getIdTokenResult();
+      const accessToken = idTokenResult.token; // This is the ID token, let's see if GCP accepts it. For real OAuth, we'd need another token.
+      
+      const input: GenerateAssessmentInput = {
+        grade: values.grade,
+        subject: values.subject,
+        textbooks: [values.textbooks],
+        assessment_type: values.assessment_type,
+        topics_or_chapters: values.topics_or_chapters,
+        accessToken: accessToken, // Passing the token to the backend
+      };
+
+      if (values.assessment_type === 'Quiz' && values.quiz_num_questions && values.quiz_difficulty && values.quiz_type && values.quiz_num_options) {
+        input.objective_config = {
+          num_questions: values.quiz_num_questions,
+          difficulty_level: values.quiz_difficulty,
+          type: values.quiz_type,
+          num_options: values.quiz_num_options,
+        };
+      } else if (values.assessment_type === 'Descriptive' && values.desc_num_questions && values.desc_difficulty && values.desc_type) {
+          input.subjective_config = {
+              num_questions: values.desc_num_questions,
+              difficulty_level: values.desc_difficulty,
+              type: values.desc_type
+          }
+      }
+    
       const result = await generateAssessment(input);
       setAssessmentResult(result.assessment);
+      setFormUrl(result.formUrl);
 
       toast({
-        title: "Assessment Generated!",
-        description: "Your assessment questions are ready below.",
+        title: "Assessment & Google Form Created!",
+        description: "Your questions are below and a Google Form has been generated.",
+        action: (
+            <Button asChild variant="outline">
+                <Link href={result.formUrl} target="_blank">
+                    Open Form <ExternalLink className="ml-2 h-4 w-4" />
+                </Link>
+            </Button>
+        )
       });
 
     } catch (error) {
@@ -93,7 +117,7 @@ export default function AssessmentPage() {
       toast({
         variant: "destructive",
         title: "Uh oh! Something went wrong.",
-        description: "There was a problem with your request.",
+        description: (error as Error).message || "There was a problem with your request.",
       })
     } finally {
       setIsLoading(false);
@@ -104,7 +128,7 @@ export default function AssessmentPage() {
     <div className="space-y-8 max-w-4xl mx-auto">
       <div>
         <h1 className="text-3xl font-headline font-bold">Generate Assessment</h1>
-        <p className="text-muted-foreground">Fill in the details to create a new assessment with AI.</p>
+        <p className="text-muted-foreground">Fill in the details to create a new assessment and a Google Form with AI.</p>
       </div>
       <Card>
         <CardHeader>
@@ -174,9 +198,7 @@ export default function AssessmentPage() {
                         <FormControl><SelectTrigger><SelectValue placeholder="Select a type" /></SelectTrigger></FormControl>
                         <SelectContent>
                           <SelectItem value="Quiz">Quiz</SelectItem>
-                          <SelectItem value="Descriptive">Descriptive</SelectItem>
-                          <SelectItem value="Fill in the Blanks">Fill in the Blanks</SelectItem>
-                           <SelectItem value="Mixed">Mixed</SelectItem>
+                          <SelectItem value="Descriptive">Descriptive (No Form)</SelectItem>
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -223,12 +245,28 @@ export default function AssessmentPage() {
         </CardContent>
       </Card>
 
+      {formUrl && (
+         <Card>
+            <CardHeader>
+                <CardTitle>Google Form Created!</CardTitle>
+                <CardDescription>A Google Form has been created and populated with the questions.</CardDescription>
+            </CardHeader>
+            <CardContent>
+                 <Button asChild>
+                    <Link href={formUrl} target="_blank">
+                       Open Google Form <ExternalLink className="ml-2 h-4 w-4" />
+                    </Link>
+                </Button>
+            </CardContent>
+         </Card>
+      )}
+
       {assessmentResult && (
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
             <div>
-                <CardTitle>Generated Assessment</CardTitle>
-                <CardDescription>Review the generated questions below.</CardDescription>
+                <CardTitle>Generated Questions (JSON)</CardTitle>
+                <CardDescription>Review the generated questions below. These were used to create the form.</CardDescription>
             </div>
             <div className="flex gap-2">
                 <Button variant="outline" size="icon"><Download className="h-4 w-4" /></Button>

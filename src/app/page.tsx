@@ -16,6 +16,9 @@ export default function LoginPage() {
   const handleGoogleSignIn = async () => {
     setIsLoading(true);
     const provider = new GoogleAuthProvider();
+    provider.addScope('https://www.googleapis.com/auth/forms.body');
+    provider.addScope('https://www.googleapis.com/auth/drive.readonly');
+
     try {
       await signInWithPopup(auth, provider);
       // The auth state change is handled by the AuthProvider, which will redirect.
