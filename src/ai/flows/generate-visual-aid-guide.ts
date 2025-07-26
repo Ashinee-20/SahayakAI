@@ -1,9 +1,10 @@
+
 'use server';
 
 /**
- * @fileOverview Generates a textual guide for creating a visual aid or illustration.
+ * @fileOverview Generates a textual guide for creating a visual aid, and then generates an image from that guide.
  *
- * - generateVisualAidGuide - A function that provides a detailed description of how to draw an illustration for a given topic.
+ * - generateVisualAidGuide - A function that provides a detailed description of how to draw an illustration and an image based on it.
  * - GenerateVisualAidGuideInput - The input type for the function.
  * - GenerateVisualAidGuideOutput - The return type for the function.
  */
@@ -19,6 +20,7 @@ export type GenerateVisualAidGuideInput = z.infer<typeof GenerateVisualAidGuideI
 
 const GenerateVisualAidGuideOutputSchema = z.object({
   guide: z.string().describe('A detailed guide on how the diagram should look. If it doesn\'t make sense to create an illustration, this will be "None".'),
+  imageDataUri: z.string().optional().describe("The generated illustration as a data URI."),
 });
 
 export type GenerateVisualAidGuideOutput = z.infer<typeof GenerateVisualAidGuideOutputSchema>;
@@ -30,7 +32,9 @@ export async function generateVisualAidGuide(input: GenerateVisualAidGuideInput)
 const generateVisualAidGuidePrompt = ai.definePrompt({
   name: 'generateVisualAidGuidePrompt',
   input: {schema: GenerateVisualAidGuideInputSchema},
-  output: {schema: GenerateVisualAidGuideOutputSchema},
+  output: {schema: z.object({
+    guide: z.string().describe('A detailed guide on how the diagram should look. If it doesn\'t make sense to create an illustration, this will be "None".'),
+  })},
   prompt: `You are a guide for an artist who makes visual aids and illustrations for school students to understand topics. 
 Your task is to provide an elaborate guide on how the diagram should look, including style, any text to be included, its position, etc. 
 The guide should be so clear and detailed that a sketch artist or even a young student could understand and draw it.
@@ -48,16 +52,32 @@ const generateVisualAidGuideFlow = ai.defineFlow(
     outputSchema: GenerateVisualAidGuideOutputSchema,
   },
   async input => {
-    const {output} = await generateVisualAidGuidePrompt(input);
+    // Step 1: Generate the textual guide.
+    const guideResponse = await generateVisualAidGuidePrompt(input);
+    const guide = guideResponse.output?.guide;
     
-    if (!output) {
+    if (!guide) {
         throw new Error("Failed to generate a guide.");
     }
 
-    if (output.guide.trim().toLowerCase() === 'none') {
+    if (guide.trim().toLowerCase() === 'none') {
         return { guide: "It doesn't seem appropriate to create a visual aid for this topic. Please try another topic." };
     }
+
+    // Step 2: Generate an image from the guide.
+    const imageResponse = await ai.generate({
+        model: 'googleai/gemini-2.0-flash-preview-image-generation',
+        prompt: guide,
+        config: {
+            responseModalities: ['TEXT', 'IMAGE'],
+        },
+    });
+
+    const imageData = imageResponse.media;
     
-    return output;
+    return {
+      guide,
+      imageDataUri: imageData?.url,
+    };
   }
 );
