@@ -1,107 +1,89 @@
-
 'use server';
 
 /**
- * @fileOverview Generates class notes from audio transcript using ElevenLabs and Gemini.
+ * @fileOverview Generates structured class notes directly from an audio recording
+ * using Gemini's multimodal and structured output capabilities.
  *
- * - generateClassNotes - A function that takes audio data, transcribes it, and generates structured class notes.
+ * - generateClassNotes - A function that takes audio data and generates structured JSON notes.
  * - GenerateClassNotesInput - The input type for the generateClassNotes function.
- * - GenerateClassNotesOutput - The return type for the generateClassNotes function.
+ * - GenerateClassNotesOutput - The return type for the generateClassNotes function (the structured notes).
  */
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
-import FormData from 'form-data';
 
+// Define the schema for the input, which is just the audio data URI
 const GenerateClassNotesInputSchema = z.object({
   audioDataUri: z
     .string()
     .describe(
-      'Audio recording of the class as a data URI that must include a MIME type and use Base64 encoding. Expected format: \'data:<mimetype>;base64,<encoded_data>\'.'
+      "Audio recording of the class as a data URI that must include a MIME type and use Base64 encoding. Expected format: 'data:<mimetype>;base64,<encoded_data>'."
     ),
 });
-
 export type GenerateClassNotesInput = z.infer<typeof GenerateClassNotesInputSchema>;
 
-const GenerateClassNotesOutputSchema = z.object({
-  notes: z.string().describe('Structured class notes generated from the audio transcript.'),
+// Define the structured output we expect from the AI model
+const NotesSchema = z.object({
+  title: z
+    .string()
+    .describe(
+      'The main title of the lecture or lesson, summarizing the core subject.'
+    ),
+  topics: z
+    .array(
+      z.object({
+        heading: z
+          .string()
+          .describe('The heading for a specific topic or sub-section.'),
+        points: z
+          .array(z.string())
+          .describe(
+            'A list of bullet points detailing the key information for this topic.'
+          ),
+      })
+    )
+    .describe('An array of the main topics discussed in the lecture.'),
 });
+export type GenerateClassNotesOutput = z.infer<typeof NotesSchema>;
 
-export type GenerateClassNotesOutput = z.infer<typeof GenerateClassNotesOutputSchema>;
 
-export async function generateClassNotes(input: GenerateClassNotesInput): Promise<GenerateClassNotesOutput> {
+// The main function the frontend will call
+export async function generateClassNotes(
+  input: GenerateClassNotesInput
+): Promise<GenerateClassNotesOutput> {
   return generateClassNotesFlow(input);
 }
 
-const generateClassNotesPrompt = ai.definePrompt({
-  name: 'generateClassNotesPrompt',
-  input: {schema: z.object({transcript: z.string()})},
-  output: {schema: GenerateClassNotesOutputSchema},
-  prompt: `You are an AI assistant designed to generate structured class notes from a given transcript. 
-
-  Transcript: {{{transcript}}}
-
-  Generate well-structured and concise class notes summarizing the key concepts discussed in the transcript.
-  The notes should be in markdown format.
-  `,
-});
-
-async function transcribeAudioWithElevenLabs(audioDataUri: string): Promise<string> {
-  const apiKey = process.env.ELEVENLABS_API_KEY;
-  if (!apiKey) {
-    throw new Error("ElevenLabs API key not found.");
-  }
-  
-  const parts = audioDataUri.match(/^data:(audio\/.*?);base64,(.*)$/);
-  if (!parts) {
-      throw new Error("Invalid audio data URI format.");
-  }
-  const mimeType = parts[1];
-  const base64Data = parts[2];
-  const audioBuffer = Buffer.from(base64Data, 'base64');
-
-  const formData = new FormData();
-  formData.append('file', audioBuffer, {
-    filename: `audio.${mimeType.split('/')[1]}`,
-    contentType: mimeType,
-  });
-
-  const response = await fetch('https://api.elevenlabs.io/v1/speech-to-text', {
-    method: 'POST',
-    headers: {
-      'xi-api-key': apiKey,
-      ...formData.getHeaders(),
-    },
-    body: formData,
-  });
-
-  if (!response.ok) {
-    const errorBody = await response.text();
-    console.error('ElevenLabs API Error:', errorBody);
-    throw new Error(`Failed to transcribe audio: ${response.statusText}`);
-  }
-
-  const result = await response.json();
-  return result.text;
-}
-
-
+// The Genkit flow that orchestrates the AI call
 const generateClassNotesFlow = ai.defineFlow(
   {
     name: 'generateClassNotesFlow',
     inputSchema: GenerateClassNotesInputSchema,
-    outputSchema: GenerateClassNotesOutputSchema,
+    outputSchema: NotesSchema,
   },
-  async input => {
-    // Step 1: Transcribe the audio using ElevenLabs
-    const transcript = await transcribeAudioWithElevenLabs(input.audioDataUri);
+  async ({audioDataUri}) => {
+    // The prompt instructing the model how to behave and what to do
+    const prompt = `You are a world-class academic note-taking assistant. Your task is to analyze the provided classroom lecture audio and generate structured, comprehensive notes. Please focus exclusively on the primary speaker, who is the teacher or lecturer. Disregard any background noise, student questions, or side conversations. The output must be in a clear, organized format. Summarize the key concepts and present them with a main title for the lecture, followed by major topics as headings, and detailed bullet points under each heading.`;
 
-    if (!transcript) {
-        throw new Error("Transcription failed or returned empty.");
+    // Call the Gemini model with multimodal input (audio + text) and request structured output
+    const {output} = await ai.generate({
+      model: 'googleai/gemini-2.5-flash',
+      prompt: [
+        {media: {url: audioDataUri}},
+        {text: prompt},
+      ],
+      config: {
+        responseMimeType: 'application/json',
+      },
+      output: {
+        schema: NotesSchema,
+      },
+    });
+    
+    if (!output) {
+      throw new Error("The API returned an empty response. The audio might have been unclear.");
     }
 
-    // Step 2: Generate notes from the transcript
-    const {output} = await generateClassNotesPrompt({transcript});
-    return output!;
+    return output;
   }
 );

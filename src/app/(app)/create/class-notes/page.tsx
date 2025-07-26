@@ -1,86 +1,122 @@
-
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
-import { generateClassNotes } from '@/ai/flows/generate-class-notes';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
+import { generateClassNotes, GenerateClassNotesOutput } from '@/ai/flows/generate-class-notes';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, Sparkles, Download, Share2, Mic, StopCircle, Clipboard, ClipboardCheck } from 'lucide-react';
+import { Loader2, Mic, StopCircle, Share2, Download } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 
+// The Recorder UI component
+const Recorder: React.FC<{
+  isRecording: boolean;
+  isProcessing: boolean;
+  onToggleRecording: () => void;
+  permissionError: string | null;
+}> = ({ isRecording, isProcessing, onToggleRecording, permissionError }) => {
+  return (
+    <div className="flex flex-col items-center space-y-4 w-full">
+      <Button
+        onClick={onToggleRecording}
+        disabled={isProcessing}
+        size="lg"
+        className={`
+          flex items-center justify-center space-x-4 text-lg py-6 px-8 rounded-full text-white
+          transition-all duration-300 ease-in-out transform hover:scale-105
+          focus:outline-none focus:ring-4 focus:ring-opacity-50
+          disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100
+          ${isRecording
+            ? 'bg-red-600 hover:bg-red-700 focus:ring-red-400'
+            : 'bg-gradient-to-r from-primary to-accent hover:scale-105'
+          }
+        `}
+      >
+        {isRecording ? (
+          <>
+            <StopCircle className="w-8 h-8" />
+            <span>Stop Recording</span>
+          </>
+        ) : (
+          <>
+            <Mic className="w-8 h-8" />
+            <span>Start Recording</span>
+          </>
+        )}
+      </Button>
+      {permissionError && <p className="text-red-500 mt-2 text-sm">{permissionError}</p>}
+    </div>
+  );
+};
+
+
+// The main page component
 export default function ClassNotesPage() {
-  const [isLoading, setIsLoading] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
-  const [recordingTime, setRecordingTime] = useState(0);
-  const [notes, setNotes] = useState<string | null>(null);
-  const [transcript, setTranscript] = useState<string | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [notes, setNotes] = useState<GenerateClassNotesOutput | null>(null);
+  const [permissionError, setPermissionError] = useState<string | null>(null);
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
-  const [isCopied, setIsCopied] = useState(false);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
   const { toast } = useToast();
 
-  useEffect(() => {
-    return () => {
-      if (timerIntervalRef.current) {
-        clearInterval(timerIntervalRef.current);
-      }
-    };
-  }, []);
-
-  const handleStartRecording = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      setIsRecording(true);
-      setRecordingTime(0);
-      setAudioBlob(null);
-      setNotes(null);
-      setTranscript(null);
-
-      timerIntervalRef.current = setInterval(() => {
-        setRecordingTime(prev => prev + 1);
-      }, 1000);
-      
-      const mediaRecorder = new MediaRecorder(stream); // Let the browser choose the mimeType
-      mediaRecorderRef.current = mediaRecorder;
-      const chunks: Blob[] = [];
-      
-      mediaRecorder.ondataavailable = (event) => {
-        chunks.push(event.data);
-      };
-
-      mediaRecorder.onstop = () => {
-        const blob = new Blob(chunks, { type: mediaRecorder.mimeType }); // Use the actual mimeType
-        setAudioBlob(blob);
-        stream.getTracks().forEach(track => track.stop());
-        toast({ title: 'Recording stopped', description: 'You can now generate notes from the audio.' });
-      };
-
-      mediaRecorder.start();
-
-    } catch (err) {
-      console.error('Error accessing microphone:', err);
-      let errorMessage = 'An unknown error occurred.';
-      if (err instanceof Error) {
-          errorMessage = err.message;
-      }
-      toast({ variant: 'destructive', title: 'Microphone access denied', description: errorMessage });
-    }
+  const handleRecordingComplete = (blob: Blob) => {
+    setAudioBlob(blob);
+    toast({ title: 'Recording stopped', description: 'You can now generate notes from the audio.' });
   };
 
-  const handleStopRecording = () => {
+  const startRecording = useCallback(async () => {
+    setPermissionError(null);
+    setNotes(null);
+    setAudioBlob(null);
+
+    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        setIsRecording(true);
+        mediaRecorderRef.current = new MediaRecorder(stream);
+        audioChunksRef.current = [];
+
+        mediaRecorderRef.current.addEventListener("dataavailable", event => {
+          audioChunksRef.current.push(event.data);
+        });
+
+        mediaRecorderRef.current.addEventListener("stop", () => {
+          const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+          handleRecordingComplete(audioBlob);
+          stream.getTracks().forEach(track => track.stop());
+        });
+
+        mediaRecorderRef.current.start();
+      } catch (err) {
+        console.error("Error accessing microphone:", err);
+        setPermissionError("Microphone access was denied. Please enable it in your browser settings and refresh the page.");
+        setIsRecording(false);
+      }
+    } else {
+      setPermissionError("Audio recording is not supported by your browser.");
+    }
+  }, []);
+
+  const stopRecording = useCallback(() => {
     if (mediaRecorderRef.current) {
       mediaRecorderRef.current.stop();
       setIsRecording(false);
-      if (timerIntervalRef.current) {
-        clearInterval(timerIntervalRef.current);
-      }
+    }
+  }, []);
+
+  const handleToggleRecording = () => {
+    if (isRecording) {
+      stopRecording();
+    } else {
+      startRecording();
     }
   };
-  
-  const blobToDataUri = (blob: Blob) => {
-    return new Promise<string>((resolve, reject) => {
+
+  const blobToDataUri = (blob: Blob): Promise<string> => {
+    return new Promise((resolve, reject) => {
         const reader = new FileReader();
         reader.onloadend = () => {
             if (typeof reader.result === 'string') {
@@ -95,58 +131,45 @@ export default function ClassNotesPage() {
   }
 
   const handleGenerateNotes = async () => {
-    setIsLoading(true);
-    setNotes(null);
-    setTranscript(null);
-
     if (!audioBlob) {
-        toast({ variant: 'destructive', title: 'No Audio Recorded', description: 'Please record your class audio first.' });
-        setIsLoading(false);
-        return;
+      toast({ variant: 'destructive', title: 'No audio recorded', description: 'Please record your class audio first.' });
+      return;
     }
+    
+    setIsProcessing(true);
+    setNotes(null);
 
     try {
       const audioDataUri = await blobToDataUri(audioBlob);
       const result = await generateClassNotes({ audioDataUri });
-
-      setNotes(result.notes);
-      
+      setNotes(result);
+      toast({ title: "Notes generated successfully!", description: "Review your structured notes below."});
     } catch (error) {
-      console.error('Error generating notes:', error);
-      let errorMessage = 'An unknown error occurred.';
-      if (error instanceof Error) {
-        errorMessage = error.message;
-      }
+      console.error("Error generating notes:", error);
       toast({ 
         variant: 'destructive', 
         title: 'Failed to generate notes.',
-        description: errorMessage,
+        description: error instanceof Error ? error.message : "An unknown error occurred."
       });
     } finally {
-      setIsLoading(false);
+      setIsProcessing(false);
     }
   };
-
-  const copyToClipboard = () => {
-    if (notes) {
-      navigator.clipboard.writeText(notes);
-      setIsCopied(true);
-      toast({ title: "Copied to clipboard!"});
-      setTimeout(() => setIsCopied(false), 2000);
-    }
-  }
-
-  const formatTime = (seconds: number) => {
-    const minutes = Math.floor(seconds / 60);
-    const remainingSeconds = seconds % 60;
-    return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
-  };
+  
+  // Cleanup effect
+  useEffect(() => {
+    return () => {
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+        mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop());
+      }
+    };
+  }, []);
 
   return (
     <div className="space-y-8 max-w-4xl mx-auto">
       <div>
         <h1 className="text-3xl font-headline font-bold">Generate Class Notes</h1>
-        <p className="text-muted-foreground">Record your class audio to get it transcribed and summarized into structured notes automatically.</p>
+        <p className="text-muted-foreground">Record your class audio to get it summarized into structured notes automatically.</p>
       </div>
 
       <Card>
@@ -156,25 +179,27 @@ export default function ClassNotesPage() {
             {isRecording ? 'Click stop when your class is finished.' : 'Click start to begin recording your class.'}
           </CardDescription>
         </CardHeader>
-        <CardContent className="flex flex-col items-center gap-4">
-          <div className="text-5xl font-mono font-bold text-primary">{formatTime(recordingTime)}</div>
-          {!isRecording ? (
-            <Button onClick={handleStartRecording} size="lg" className="bg-gradient-to-r from-green-500 to-green-600 text-white hover:scale-105 transition-transform duration-200">
-              <Mic className="mr-2 h-5 w-5" /> Start Recording
-            </Button>
-          ) : (
-            <Button onClick={handleStopRecording} size="lg" variant="destructive" className="bg-gradient-to-r from-red-500 to-red-600 text-white hover:scale-105 transition-transform duration-200">
-              <StopCircle className="mr-2 h-5 w-5" /> Stop Recording
-            </Button>
-          )}
+        <CardContent>
+          <Recorder
+            isRecording={isRecording}
+            isProcessing={isProcessing}
+            onToggleRecording={handleToggleRecording}
+            permissionError={permissionError}
+          />
         </CardContent>
       </Card>
       
       <div className="flex justify-center">
-         <Button onClick={handleGenerateNotes} disabled={isLoading || !audioBlob} className="bg-gradient-to-r from-primary to-accent text-primary-foreground hover:scale-105 transition-transform duration-200 text-lg py-6 px-8">
-            {isLoading ? <><Loader2 className="mr-2 h-5 w-5 animate-spin" />Generating Notes...</> : <><Sparkles className="mr-2 h-5 w-5" />2. Generate Notes</>}
+         <Button onClick={handleGenerateNotes} disabled={isProcessing || !audioBlob} size="lg">
+            {isProcessing ? <><Loader2 className="mr-2 h-5 w-5 animate-spin" />Processing Audio...</> : <>2. Generate Notes from Audio</>}
           </Button>
       </div>
+
+      {isProcessing && (
+        <div className="text-center text-muted-foreground">
+            <p>Processing your audio... this may take a moment.</p>
+        </div>
+      )}
 
       {notes && (
         <Card>
@@ -183,17 +208,28 @@ export default function ClassNotesPage() {
                 <CardTitle>3. Generated Class Notes</CardTitle>
                 <CardDescription>Review the generated notes below.</CardDescription>
             </div>
-            <div className="flex gap-2">
-                <Button variant="outline" size="icon" onClick={copyToClipboard}>
-                  {isCopied ? <ClipboardCheck className="h-4 w-4" /> : <Clipboard className="h-4 w-4" />}
-                </Button>
+             <div className="flex gap-2">
                 <Button variant="outline" size="icon"><Download className="h-4 w-4" /></Button>
                 <Button variant="outline" size="icon"><Share2 className="h-4 w-4" /></Button>
             </div>
           </CardHeader>
           <CardContent>
-            <div className="prose dark:prose-invert max-w-none bg-muted p-4 rounded-lg whitespace-pre-wrap">
-               <div dangerouslySetInnerHTML={{ __html: notes.replace(/\n/g, '<br />') }} />
+            <div className="space-y-4">
+                <h2 className="text-2xl font-headline font-bold">{notes.title}</h2>
+                <Accordion type="single" collapsible className="w-full" defaultValue="item-0">
+                  {notes.topics.map((topic, index) => (
+                    <AccordionItem value={`item-${index}`} key={index}>
+                        <AccordionTrigger className="text-lg font-semibold">{topic.heading}</AccordionTrigger>
+                        <AccordionContent>
+                            <ul className="list-disc pl-6 space-y-2">
+                                {topic.points.map((point, pIndex) => (
+                                    <li key={pIndex}>{point}</li>
+                                ))}
+                            </ul>
+                        </AccordionContent>
+                    </AccordionItem>
+                  ))}
+                </Accordion>
             </div>
           </CardContent>
         </Card>
