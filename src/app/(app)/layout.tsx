@@ -5,7 +5,6 @@ import Header from '@/components/header';
 
 export default function AppLayout({ children }: { children: ReactNode }) {
   return (
-    <AuthProvider>
       <div className="min-h-screen w-full flex">
         <MainSidebar />
         <div className="flex flex-col flex-1">
@@ -15,6 +14,5 @@ export default function AppLayout({ children }: { children: ReactNode }) {
           </main>
         </div>
       </div>
-    </AuthProvider>
   );
 }
