@@ -1,3 +1,4 @@
+
 'use server';
 
 /**
@@ -10,6 +11,7 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
+import FormData from 'form-data';
 
 const GenerateClassNotesInputSchema = z.object({
   audioDataUri: z
@@ -50,24 +52,27 @@ async function transcribeAudioWithElevenLabs(audioDataUri: string): Promise<stri
     throw new Error("ElevenLabs API key not found.");
   }
   
-  // Extract content type and base64 data from data URI
   const parts = audioDataUri.match(/^data:(audio\/.*?);base64,(.*)$/);
   if (!parts) {
       throw new Error("Invalid audio data URI format.");
   }
   const mimeType = parts[1];
   const base64Data = parts[2];
-
-  // Convert base64 to a Buffer
   const audioBuffer = Buffer.from(base64Data, 'base64');
-  
+
+  const formData = new FormData();
+  formData.append('file', audioBuffer, {
+    filename: `audio.${mimeType.split('/')[1]}`,
+    contentType: mimeType,
+  });
+
   const response = await fetch('https://api.elevenlabs.io/v1/speech-to-text', {
     method: 'POST',
     headers: {
       'xi-api-key': apiKey,
-      'Content-Type': mimeType
+      ...formData.getHeaders(),
     },
-    body: audioBuffer,
+    body: formData,
   });
 
   if (!response.ok) {
