@@ -11,9 +11,8 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { Loader2, Sparkles, Download, Share2, ExternalLink } from 'lucide-react';
+import { Loader2, Sparkles, Download, Share2 } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
-import Link from 'next/link';
 
 const formSchema = z.object({
   grade: z.string().min(1, 'Grade is required'),
@@ -36,7 +35,7 @@ const formSchema = z.object({
 
 export default function AssessmentPage() {
   const [isLoading, setIsLoading] = useState(false);
-  const [assessmentResult, setAssessmentResult] = useState<{assessment: string, link: string} | null>(null);
+  const [assessmentResult, setAssessmentResult] = useState<string | null>(null);
   const { toast } = useToast();
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -82,18 +81,11 @@ export default function AssessmentPage() {
 
     try {
       const result = await generateAssessment(input);
-      // Mock Google Form creation
-      const googleFormLink = 'https://forms.gle/mock-form-link';
-      setAssessmentResult({ assessment: result.assessment, link: googleFormLink });
+      setAssessmentResult(result.assessment);
 
       toast({
-        title: "Assessment Created!",
-        description: "Your Google Form has been generated successfully.",
-        action: (
-          <Button variant="ghost" size="sm" asChild>
-            <Link href={googleFormLink} target="_blank">Open Form <ExternalLink className="ml-2 h-4 w-4" /></Link>
-          </Button>
-        ),
+        title: "Assessment Generated!",
+        description: "Your assessment questions are ready below.",
       });
 
     } catch (error) {
@@ -244,13 +236,8 @@ export default function AssessmentPage() {
             </div>
           </CardHeader>
           <CardContent>
-             <div className="mb-4">
-                 <Link href={assessmentResult.link} target="_blank" className="text-primary hover:underline flex items-center gap-2">
-                    Open Google Form <ExternalLink className="h-4 w-4"/>
-                </Link>
-             </div>
             <pre className="bg-muted p-4 rounded-lg overflow-x-auto text-sm">
-              <code>{assessmentResult.assessment}</code>
+              <code>{assessmentResult}</code>
             </pre>
           </CardContent>
         </Card>
