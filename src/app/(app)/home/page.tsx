@@ -27,8 +27,8 @@ const recentItems = [
 ]
 
 export default function HomePage() {
-  const { user } = useAuth();
-  const userName = user?.displayName?.split(' ')[0] || 'Teacher';
+  const { user, isGuest } = useAuth();
+  const userName = user?.displayName?.split(' ')[0] || 'Guest';
 
   return (
     <div className="space-y-8">

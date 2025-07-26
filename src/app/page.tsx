@@ -3,9 +3,10 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { BookOpenCheck, ChevronRight, Loader2 } from 'lucide-react';
+import { BookOpenCheck, ChevronRight, Loader2, User } from 'lucide-react';
 import { getAuth, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 import { app } from '@/lib/firebase';
+import Link from 'next/link';
 
 export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
@@ -40,7 +41,7 @@ export default function LoginPage() {
           Your AI-powered teaching assistant for low-resource, multi-grade classrooms.
         </p>
 
-        <div className="mt-10">
+        <div className="mt-10 space-y-4">
           <Button
             onClick={handleGoogleSignIn}
             disabled={isLoading}
@@ -56,9 +57,16 @@ export default function LoginPage() {
               </>
             )}
           </Button>
-          <p className="mt-4 text-sm text-muted-foreground">
-            Get started by signing in with your Google account.
-          </p>
+           <Button
+            asChild
+            variant="link"
+            className="text-muted-foreground"
+          >
+            <Link href="/home?guest=true">
+                <User className="mr-2 h-4 w-4"/>
+                Continue as Guest
+            </Link>
+          </Button>
         </div>
       </div>
       <footer className="absolute bottom-4 text-sm text-muted-foreground">

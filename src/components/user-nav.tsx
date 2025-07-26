@@ -13,10 +13,10 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuth } from '@/hooks/use-auth';
 import { getAuth, signOut } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
-import { LogOut, Settings, User } from 'lucide-react';
+import { LogIn, LogOut, Settings, User } from 'lucide-react';
 
 export default function UserNav() {
-  const { user } = useAuth();
+  const { user, isGuest } = useAuth();
   const router = useRouter();
   const auth = getAuth();
 
@@ -24,14 +24,27 @@ export default function UserNav() {
     await signOut(auth);
     router.push('/');
   };
+  
+  const handleSignIn = () => {
+    router.push('/');
+  }
 
   const getInitials = (name: string | null | undefined) => {
-    if (!name) return 'U';
+    if (!name) return 'G';
     return name
       .split(' ')
       .map((n) => n[0])
       .join('');
   };
+
+  if (isGuest) {
+    return (
+         <Button onClick={handleSignIn}>
+            <LogIn className="mr-2 h-4 w-4" />
+            Sign In
+        </Button>
+    )
+  }
 
   return (
     <DropdownMenu>
