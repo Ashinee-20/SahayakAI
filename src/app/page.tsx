@@ -7,21 +7,29 @@ import { BookOpenCheck, ChevronRight, Loader2, User } from 'lucide-react';
 import { getAuth, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 import { app } from '@/lib/firebase';
 import Link from 'next/link';
+import { useAuth } from '@/hooks/use-auth';
 
-export default function LoginPage() {
+export default function RootPage() {
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
   const auth = getAuth(app);
+  const { user } = useAuth();
+
+  if (user) {
+    router.push('/home');
+    return null;
+  }
 
   const handleGoogleSignIn = async () => {
     setIsLoading(true);
     const provider = new GoogleAuthProvider();
+    // Request scopes for Google Forms API
     provider.addScope('https://www.googleapis.com/auth/forms.body');
     provider.addScope('https://www.googleapis.com/auth/drive.readonly');
-
+    
     try {
       await signInWithPopup(auth, provider);
-      // The auth state change is handled by the AuthProvider, which will redirect.
+      // AuthProvider will handle redirect on successful sign-in
     } catch (error) {
       console.error('Google Sign-In Error:', error);
       setIsLoading(false);

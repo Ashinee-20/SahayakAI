@@ -34,14 +34,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const auth = getAuth(app);
 
   useEffect(() => {
-    if (searchParams.get('guest') === 'true') {
+    const guestParam = searchParams.get('guest');
+    if (guestParam === 'true') {
       setIsGuest(true);
+      if (pathname === '/') {
+        router.push('/home');
+      }
     }
-  }, [searchParams]);
+  }, [searchParams, pathname, router]);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setUser(user);
+    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+      setUser(firebaseUser);
       setLoading(false);
     });
 
@@ -49,39 +53,35 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, [auth]);
 
   useEffect(() => {
-    if (!loading && !user && !isGuest && pathname !== '/') {
-      router.push('/');
-    }
-    if (!loading && user && pathname === '/') {
+    if (!loading) {
+      const isAuthPage = pathname === '/';
+      if (!user && !isGuest && !isAuthPage) {
+        router.push('/');
+      } else if (user && isAuthPage) {
         router.push('/home');
+      }
     }
-  }, [user, loading, pathname, router, isGuest]);
-
-  if (loading || (!user && !isGuest && pathname !== '/')) {
-    return (
+  }, [user, loading, isGuest, pathname, router]);
+  
+  if (loading) {
+     return (
       <div className="flex items-center justify-center h-screen">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
       </div>
     );
   }
-  
-  if ((!user && pathname === '/') || isGuest) {
-     return (
-      <AuthContext.Provider value={{ user: user, loading: loading, isGuest: isGuest }}>
-        {children}
-      </AuthContext.Provider>
-    );
-  }
 
-  if (user) {
-    return (
-      <AuthContext.Provider value={{ user, loading, isGuest }}>
-        {children}
-      </AuthContext.Provider>
-    );
-  }
-
-  return null;
+  return (
+    <AuthContext.Provider value={{ user, loading, isGuest }}>
+      {children}
+    </AuthContext.Provider>
+  );
 };
 
-export const useAuth = () => useContext(AuthContext);
+export const useAuth = () => {
+    const context = useContext(AuthContext);
+    if (context === undefined) {
+        throw new Error('useAuth must be used within an AuthProvider');
+    }
+    return context;
+};

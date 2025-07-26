@@ -16,6 +16,8 @@ import { Loader2, Sparkles, Download, Share2, ExternalLink } from 'lucide-react'
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from '@/hooks/use-auth';
 import Link from 'next/link';
+import { getAuth, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
+import { app } from '@/lib/firebase';
 
 const formSchema = z.object({
   grade: z.string().min(1, 'Grade is required'),
@@ -42,6 +44,7 @@ export default function AssessmentPage() {
   const [formUrl, setFormUrl] = useState<string | null>(null);
   const { toast } = useToast();
   const { user } = useAuth();
+  const auth = getAuth(app);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -68,7 +71,17 @@ export default function AssessmentPage() {
     }
 
     try {
-      const accessToken = await user.getIdToken();
+      const provider = new GoogleAuthProvider();
+      provider.addScope('https://www.googleapis.com/auth/forms.body');
+      provider.addScope('https://www.googleapis.com/auth/drive.readonly');
+      
+      const result = await signInWithPopup(auth, provider);
+      const credential = GoogleAuthProvider.credentialFromResult(result);
+      
+      if (!credential?.accessToken) {
+        throw new Error("Could not retrieve access token from Google.");
+      }
+      const accessToken = credential.accessToken;
       
       const input: GenerateAssessmentInput = {
         grade: values.grade,
@@ -76,7 +89,7 @@ export default function AssessmentPage() {
         textbooks: [values.textbooks],
         assessment_type: values.assessment_type,
         topics_or_chapters: values.topics_or_chapters,
-        accessToken: accessToken, // Passing the token to the backend
+        accessToken: accessToken,
       };
 
       if (values.assessment_type === 'Quiz' || values.assessment_type === 'Mixed') {
@@ -95,16 +108,16 @@ export default function AssessmentPage() {
           }
       }
     
-      const result = await generateAssessment(input);
-      setAssessmentResult(result.assessment);
-      setFormUrl(result.formUrl);
+      const assessmentData = await generateAssessment(input);
+      setAssessmentResult(assessmentData.assessment);
+      setFormUrl(assessmentData.formUrl);
 
       toast({
         title: "Assessment & Google Form Created!",
         description: "Your questions are below and a Google Form has been generated.",
         action: (
             <Button asChild variant="outline">
-                <Link href={result.formUrl} target="_blank" rel="noopener noreferrer">
+                <Link href={assessmentData.formUrl} target="_blank" rel="noopener noreferrer">
                     Open Form <ExternalLink className="ml-2 h-4 w-4" />
                 </Link>
             </Button>
