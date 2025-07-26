@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState } from 'react';
@@ -12,6 +11,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Textarea } from '@/components/ui/textarea';
 import { Loader2, Sparkles, Download, Share2, Image as ImageIcon } from 'lucide-react';
+import { useAuth } from '@/hooks/use-auth';
+import { useToast } from '@/hooks/use-toast';
 
 const formSchema = z.object({
   topic: z.string().min(3, 'Topic is required'),
@@ -20,6 +21,8 @@ const formSchema = z.object({
 export default function VisualAidPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [result, setResult] = useState<GenerateVisualAidGuideOutput | null>(null);
+  const { user } = useAuth();
+  const { toast } = useToast();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -32,12 +35,19 @@ export default function VisualAidPage() {
     setIsLoading(true);
     setResult(null);
 
+    if (!user) {
+        toast({ variant: "destructive", title: "Authentication Error", description: "You must be signed in to generate content." });
+        setIsLoading(false);
+        return;
+    }
+
     try {
-      const result = await generateVisualAidGuide(values);
+      const result = await generateVisualAidGuide({ ...values, userId: user.uid });
       setResult(result);
+      toast({ title: "Visual Aid Generated", description: "Your guide and image have been created and saved to My Space."});
     } catch (error) {
       console.error('Error generating visual aid guide:', error);
-      // You can add a toast notification here to inform the user of the error
+      toast({ variant: 'destructive', title: 'Error', description: 'Failed to generate visual aid.' });
     } finally {
       setIsLoading(false);
     }

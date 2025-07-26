@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Loader2, Mic, StopCircle, Share2, Download } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { useAuth } from '@/hooks/use-auth';
 
 // The Recorder UI component
 const Recorder: React.FC<{
@@ -61,6 +62,7 @@ export default function ClassNotesPage() {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const { toast } = useToast();
+  const { user } = useAuth();
 
   const handleRecordingComplete = (blob: Blob) => {
     setAudioBlob(blob);
@@ -135,15 +137,19 @@ export default function ClassNotesPage() {
       toast({ variant: 'destructive', title: 'No audio recorded', description: 'Please record your class audio first.' });
       return;
     }
+     if (!user) {
+        toast({ variant: "destructive", title: "Authentication Error", description: "You must be signed in to generate content." });
+        return;
+    }
     
     setIsProcessing(true);
     setNotes(null);
 
     try {
       const audioDataUri = await blobToDataUri(audioBlob);
-      const result = await generateClassNotes({ audioDataUri });
+      const result = await generateClassNotes({ audioDataUri, userId: user.uid });
       setNotes(result);
-      toast({ title: "Notes generated successfully!", description: "Review your structured notes below."});
+      toast({ title: "Notes generated successfully!", description: "Your structured notes have been saved to My Space."});
     } catch (error) {
       console.error("Error generating notes:", error);
       toast({ 

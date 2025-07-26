@@ -10,6 +10,7 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
+import { saveContent } from '@/services/firebase-service';
 
 const GenerateLessonPlanInputSchema = z.object({
   grade: z.string().describe('The grade level for the lesson plan.'),
@@ -17,6 +18,7 @@ const GenerateLessonPlanInputSchema = z.object({
   textbooks: z.array(z.string()).describe('A list of textbooks to use for the lesson plan.'),
   numClasses: z.number().int().min(1).describe('The number of classes the lesson plan should cover.'),
   topicsOrChapters: z.string().describe('The topics or chapter numbers to be covered in the lesson plan.'),
+  userId: z.string().describe('The user ID for saving the content.'),
 });
 export type GenerateLessonPlanInput = z.infer<typeof GenerateLessonPlanInputSchema>;
 
@@ -55,6 +57,14 @@ const generateLessonPlanFlow = ai.defineFlow(
   },
   async input => {
     const {output} = await generateLessonPlanPrompt(input);
-    return output!;
+    if (!output) {
+        throw new Error("Failed to generate a lesson plan.");
+    }
+    
+    // Save to Firestore
+    const title = `Lesson Plan: ${input.subject} - ${input.topicsOrChapters}`;
+    await saveContent(input.userId, 'lessonPlan', title, JSON.parse(output.lessonPlan));
+
+    return output;
   }
 );

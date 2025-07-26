@@ -34,6 +34,7 @@ export const GenerateAssessmentInputSchema = z.object({
   assessment_type: z.enum(['Quiz', 'Descriptive', 'Fill in the Blanks', 'Mixed']).describe('Type of assessment.'),
   topics_or_chapters: z.string().describe('Topics or chapters covered in the assessment.'),
   accessToken: z.string().describe('Google OAuth2 access token for Forms API.'),
+  userId: z.string().describe('The user ID for saving the content.'),
   
   objective_config: ObjectiveConfigSchema.optional().describe('Configuration for objective questions.'),
   subjective_config: SubjectiveConfigSchema.optional().describe('Configuration for subjective questions.'),

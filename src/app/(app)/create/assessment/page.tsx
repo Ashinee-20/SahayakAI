@@ -90,6 +90,7 @@ export default function AssessmentPage() {
         assessment_type: values.assessment_type,
         topics_or_chapters: values.topics_or_chapters,
         accessToken: accessToken,
+        userId: user.uid,
       };
 
       if (values.assessment_type === 'Quiz' || values.assessment_type === 'Mixed') {

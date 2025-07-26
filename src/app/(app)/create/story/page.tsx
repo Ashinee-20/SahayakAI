@@ -11,6 +11,8 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Loader2, Sparkles, Download, Share2 } from 'lucide-react';
+import { useAuth } from '@/hooks/use-auth';
+import { useToast } from '@/hooks/use-toast';
 
 const formSchema = z.object({
   grade: z.string().min(1, 'Grade is required'),
@@ -23,6 +25,8 @@ const formSchema = z.object({
 export default function StoryPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [story, setStory] = useState<string | null>(null);
+  const { user } = useAuth();
+  const { toast } = useToast();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -39,11 +43,21 @@ export default function StoryPage() {
     setIsLoading(true);
     setStory(null);
 
+    if (!user) {
+        toast({ variant: "destructive", title: "Authentication Error", description: "You must be signed in to generate content." });
+        setIsLoading(false);
+        return;
+    }
+
+    const input: GenerateStoryInput = { ...values, userId: user.uid };
+
     try {
-      const result = await generateStory(values);
+      const result = await generateStory(input);
       setStory(result.story);
+      toast({ title: "Story Generated", description: "Your story has been created and saved to My Space."});
     } catch (error) {
       console.error('Error generating story:', error);
+      toast({ variant: 'destructive', title: 'Error', description: 'Failed to generate story.' });
     } finally {
       setIsLoading(false);
     }

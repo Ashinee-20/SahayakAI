@@ -13,6 +13,7 @@ import {
   GenerateAssessmentInput,
   GenerateAssessmentOutput
 } from '@/ai/schemas/assessment';
+import { saveContent } from '@/services/firebase-service';
 
 
 // Exported function that the frontend will call
@@ -97,7 +98,18 @@ const generateAssessmentFlow = ai.defineFlow(
     // Step 5: Get the form details (including the public URL)
     const form = await formsService.getForm(formId);
 
-    // Step 6: Return the URL and the raw questions
+    // Step 6: Save to Firestore
+    await saveContent(
+        input.userId,
+        'assessment',
+        formTitle,
+        {
+            formUrl: form.responderUri,
+            questions: generatedQuestions,
+        }
+    );
+
+    // Step 7: Return the URL and the raw questions
     return {
       formUrl: form.responderUri,
       assessment: JSON.stringify(generatedQuestions, null, 2),

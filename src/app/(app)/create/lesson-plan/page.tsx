@@ -12,6 +12,8 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Loader2, Sparkles, Download, Share2 } from 'lucide-react';
+import { useAuth } from '@/hooks/use-auth';
+import { useToast } from '@/hooks/use-toast';
 
 const formSchema = z.object({
   grade: z.string().min(1, 'Grade is required'),
@@ -24,6 +26,8 @@ const formSchema = z.object({
 export default function LessonPlanPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [lessonPlan, setLessonPlan] = useState<string | null>(null);
+  const { user } = useAuth();
+  const { toast } = useToast();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -39,19 +43,27 @@ export default function LessonPlanPage() {
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
     setLessonPlan(null);
+    
+    if (!user) {
+        toast({ variant: "destructive", title: "Authentication Error", description: "You must be signed in to generate content." });
+        setIsLoading(false);
+        return;
+    }
 
     const input: GenerateLessonPlanInput = {
       ...values,
       textbooks: [values.textbooks],
+      userId: user.uid,
     };
 
     try {
       const result = await generateLessonPlan(input);
       const parsedPlan = JSON.parse(result.lessonPlan);
       setLessonPlan(JSON.stringify(parsedPlan, null, 2));
+      toast({ title: "Lesson Plan Generated", description: "Your lesson plan has been created and saved to My Space."});
     } catch (error) {
       console.error('Error generating lesson plan:', error);
-      // You can use a toast to show the error to the user
+      toast({ variant: 'destructive', title: 'Error', description: 'Failed to generate lesson plan.' });
     } finally {
       setIsLoading(false);
     }
