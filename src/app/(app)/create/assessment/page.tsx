@@ -14,7 +14,6 @@ import { Textarea } from '@/components/ui/textarea';
 import { Loader2, Sparkles, Download, Share2, ExternalLink } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from '@/hooks/use-auth';
-import { getAuth } from 'firebase/auth';
 import Link from 'next/link';
 
 const formSchema = z.object({
@@ -42,7 +41,6 @@ export default function AssessmentPage() {
   const [formUrl, setFormUrl] = useState<string | null>(null);
   const { toast } = useToast();
   const { user } = useAuth();
-  const auth = getAuth();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -69,8 +67,7 @@ export default function AssessmentPage() {
     }
 
     try {
-      const idTokenResult = await user.getIdTokenResult();
-      const accessToken = idTokenResult.token; // This is the ID token, let's see if GCP accepts it. For real OAuth, we'd need another token.
+      const accessToken = await user.getIdToken();
       
       const input: GenerateAssessmentInput = {
         grade: values.grade,
@@ -81,18 +78,19 @@ export default function AssessmentPage() {
         accessToken: accessToken, // Passing the token to the backend
       };
 
-      if (values.assessment_type === 'Quiz' && values.quiz_num_questions && values.quiz_difficulty && values.quiz_type && values.quiz_num_options) {
+      if (values.assessment_type === 'Quiz' || values.assessment_type === 'Mixed') {
         input.objective_config = {
-          num_questions: values.quiz_num_questions,
-          difficulty_level: values.quiz_difficulty,
-          type: values.quiz_type,
-          num_options: values.quiz_num_options,
+          num_questions: values.quiz_num_questions || (values.assessment_type === 'Mixed' ? 5 : 10),
+          difficulty_level: values.quiz_difficulty || 'Medium',
+          type: values.quiz_type || 'Single Correct',
+          num_options: values.quiz_num_options || 4,
         };
-      } else if (values.assessment_type === 'Descriptive' && values.desc_num_questions && values.desc_difficulty && values.desc_type) {
+      } 
+      if (values.assessment_type === 'Descriptive' || values.assessment_type === 'Mixed') {
           input.subjective_config = {
-              num_questions: values.desc_num_questions,
-              difficulty_level: values.desc_difficulty,
-              type: values.desc_type
+              num_questions: values.desc_num_questions || (values.assessment_type === 'Mixed' ? 5 : 5),
+              difficulty_level: values.desc_difficulty || 'Medium',
+              type: values.desc_type || 'Short Answer'
           }
       }
     
@@ -105,7 +103,7 @@ export default function AssessmentPage() {
         description: "Your questions are below and a Google Form has been generated.",
         action: (
             <Button asChild variant="outline">
-                <Link href={result.formUrl} target="_blank">
+                <Link href={result.formUrl} target="_blank" rel="noopener noreferrer">
                     Open Form <ExternalLink className="ml-2 h-4 w-4" />
                 </Link>
             </Button>
@@ -117,7 +115,7 @@ export default function AssessmentPage() {
       toast({
         variant: "destructive",
         title: "Uh oh! Something went wrong.",
-        description: (error as Error).message || "There was a problem with your request.",
+        description: (error as Error).message || "There was a problem with your request. Ensure the Google Forms API is enabled in your Google Cloud project.",
       })
     } finally {
       setIsLoading(false);
@@ -197,8 +195,9 @@ export default function AssessmentPage() {
                        <Select onValueChange={field.onChange} defaultValue={field.value}>
                         <FormControl><SelectTrigger><SelectValue placeholder="Select a type" /></SelectTrigger></FormControl>
                         <SelectContent>
-                          <SelectItem value="Quiz">Quiz</SelectItem>
-                          <SelectItem value="Descriptive">Descriptive (No Form)</SelectItem>
+                          <SelectItem value="Quiz">Quiz (Multiple Choice)</SelectItem>
+                          <SelectItem value="Descriptive">Descriptive (Text Questions)</SelectItem>
+                          <SelectItem value="Mixed">Mixed</SelectItem>
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -208,19 +207,25 @@ export default function AssessmentPage() {
               </div>
 
               {/* Conditional Fields */}
-              {assessmentType === 'Quiz' && (
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-6 p-4 border rounded-lg bg-muted/50">
-                   <FormField control={form.control} name="quiz_num_questions" render={({ field }) => (<FormItem><FormLabel># Questions</FormLabel><FormControl><Input type="number" placeholder="10" {...field} /></FormControl></FormItem>)} />
-                   <FormField control={form.control} name="quiz_num_options" render={({ field }) => (<FormItem><FormLabel># Options</FormLabel><FormControl><Input type="number" placeholder="4" {...field} /></FormControl></FormItem>)} />
-                   <FormField control={form.control} name="quiz_difficulty" render={({ field }) => (<FormItem><FormLabel>Difficulty</FormLabel><Select onValueChange={field.onChange}><FormControl><SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger></FormControl><SelectContent><SelectItem value="Easy">Easy</SelectItem><SelectItem value="Medium">Medium</SelectItem><SelectItem value="Hard">Hard</SelectItem></SelectContent></Select></FormItem>)} />
-                   <FormField control={form.control} name="quiz_type" render={({ field }) => (<FormItem><FormLabel>Type</FormLabel><Select onValueChange={field.onChange}><FormControl><SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger></FormControl><SelectContent><SelectItem value="Single Correct">Single Correct</SelectItem><SelectItem value="Multi Correct">Multi Correct</SelectItem><SelectItem value="Both">Both</SelectItem></SelectContent></Select></FormItem>)} />
+              {(assessmentType === 'Quiz' || assessmentType === 'Mixed') && (
+                <div className="p-4 border rounded-lg bg-muted/50 space-y-4">
+                  <h3 className="font-semibold">Multiple Choice Settings</h3>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                     <FormField control={form.control} name="quiz_num_questions" render={({ field }) => (<FormItem><FormLabel># Questions</FormLabel><FormControl><Input type="number" placeholder="10" {...field} /></FormControl></FormItem>)} />
+                     <FormField control={form.control} name="quiz_num_options" render={({ field }) => (<FormItem><FormLabel># Options</FormLabel><FormControl><Input type="number" placeholder="4" {...field} /></FormControl></FormItem>)} />
+                     <FormField control={form.control} name="quiz_difficulty" render={({ field }) => (<FormItem><FormLabel>Difficulty</FormLabel><Select onValueChange={field.onChange}><FormControl><SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger></FormControl><SelectContent><SelectItem value="Easy">Easy</SelectItem><SelectItem value="Medium">Medium</SelectItem><SelectItem value="Hard">Hard</SelectItem></SelectContent></Select></FormItem>)} />
+                     <FormField control={form.control} name="quiz_type" render={({ field }) => (<FormItem><FormLabel>Type</FormLabel><Select onValueChange={field.onChange}><FormControl><SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger></FormControl><SelectContent><SelectItem value="Single Correct">Single Correct</SelectItem><SelectItem value="Multi Correct">Multi Correct</SelectItem><SelectItem value="Both">Both</SelectItem></SelectContent></Select></FormItem>)} />
+                  </div>
                 </div>
               )}
-               {assessmentType === 'Descriptive' && (
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 p-4 border rounded-lg bg-muted/50">
-                   <FormField control={form.control} name="desc_num_questions" render={({ field }) => (<FormItem><FormLabel># Questions</FormLabel><FormControl><Input type="number" placeholder="5" {...field} /></FormControl></FormItem>)} />
-                   <FormField control={form.control} name="desc_difficulty" render={({ field }) => (<FormItem><FormLabel>Difficulty</FormLabel><Select onValueChange={field.onChange}><FormControl><SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger></FormControl><SelectContent><SelectItem value="Easy">Easy</SelectItem><SelectItem value="Medium">Medium</SelectItem><SelectItem value="Hard">Hard</SelectItem></SelectContent></Select></FormItem>)} />
-                   <FormField control={form.control} name="desc_type" render={({ field }) => (<FormItem><FormLabel>Type</FormLabel><Select onValueChange={field.onChange}><FormControl><SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger></FormControl><SelectContent><SelectItem value="Short Answer">Short Answer</SelectItem><SelectItem value="Long Answer">Long Answer</SelectItem><SelectItem value="Both">Both</SelectItem></SelectContent></Select></FormItem>)} />
+               {(assessmentType === 'Descriptive' || assessmentType === 'Mixed') && (
+                <div className="p-4 border rounded-lg bg-muted/50 space-y-4">
+                  <h3 className="font-semibold">Descriptive Settings</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                     <FormField control={form.control} name="desc_num_questions" render={({ field }) => (<FormItem><FormLabel># Questions</FormLabel><FormControl><Input type="number" placeholder="5" {...field} /></FormControl></FormItem>)} />
+                     <FormField control={form.control} name="desc_difficulty" render={({ field }) => (<FormItem><FormLabel>Difficulty</FormLabel><Select onValueChange={field.onChange}><FormControl><SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger></FormControl><SelectContent><SelectItem value="Easy">Easy</SelectItem><SelectItem value="Medium">Medium</SelectItem><SelectItem value="Hard">Hard</SelectItem></SelectContent></Select></FormItem>)} />
+                     <FormField control={form.control} name="desc_type" render={({ field }) => (<FormItem><FormLabel>Type</FormLabel><Select onValueChange={field.onChange}><FormControl><SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger></FormControl><SelectContent><SelectItem value="Short Answer">Short Answer</SelectItem><SelectItem value="Long Answer">Long Answer</SelectItem><SelectItem value="Both">Both</SelectItem></SelectContent></Select></FormItem>)} />
+                  </div>
                 </div>
               )}
 
@@ -253,7 +258,7 @@ export default function AssessmentPage() {
             </CardHeader>
             <CardContent>
                  <Button asChild>
-                    <Link href={formUrl} target="_blank">
+                    <Link href={formUrl} target="_blank" rel="noopener noreferrer">
                        Open Google Form <ExternalLink className="ml-2 h-4 w-4" />
                     </Link>
                 </Button>

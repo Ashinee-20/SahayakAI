@@ -6,7 +6,7 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
-import { GoogleFormsService, Question } from '@/services/google-forms';
+import { GoogleFormsService, FormQuestion } from '@/services/google-forms';
 
 // Schemas for different assessment configurations
 const ObjectiveConfigSchema = z.object({
@@ -53,9 +53,9 @@ export type GenerateAssessmentInput = z.infer<typeof GenerateAssessmentInputSche
 
 // Define the structure of a single question for the AI model
 const QuestionSchema = z.object({
-  question: z.string().describe("The question text."),
-  type: z.enum(["RADIO", "CHECKBOX"]).describe("The type of multiple choice question. RADIO for single-choice, CHECKBOX for multi-choice."),
-  options: z.array(z.string()).describe("A list of possible answers for the question."),
+  title: z.string().describe("The question text."),
+  type: z.enum(["RADIO", "CHECKBOX", "TEXT", "PARAGRAPH"]).describe("The type of question. RADIO for single-choice, CHECKBOX for multi-choice, TEXT for short answer, PARAGRAPH for long answer."),
+  options: z.array(z.string()).optional().describe("A list of possible answers for choice questions."),
 });
 
 // Define the output schema for the AI prompt
@@ -80,7 +80,7 @@ const assessmentPrompt = ai.definePrompt({
   input: {schema: GenerateAssessmentInputSchema},
   output: {schema: AssessmentQuestionsSchema},
   prompt: `You are an expert teacher. Your task is to generate assessment questions based on the provided configuration.
-Generate the questions in a structured JSON format. For question types, use 'RADIO' for single correct answers and 'CHECKBOX' for multiple correct answers.
+Generate the questions in a structured JSON format. For question types, use 'RADIO' for single correct answers, 'CHECKBOX' for multiple correct answers, 'TEXT' for short answer, and 'PARAGRAPH' for long answer.
 
 Grade: {{{grade}}}
 Subject: {{{subject}}}
@@ -92,7 +92,7 @@ Topics/Chapters: {{{topics_or_chapters}}}
 Objective Questions Configuration:
 Number of Questions: {{{objective_config.num_questions}}}
 Difficulty Level: {{{objective_config.difficulty_level}}}
-Type: {{{objective_config.type}}}
+Type: {{{objective_config.type}}} (Should be RADIO or CHECKBOX)
 Number of Options: {{{objective_config.num_options}}}
 {{/if}}
 
@@ -100,12 +100,12 @@ Number of Options: {{{objective_config.num_options}}}
 Subjective Questions Configuration:
 Number of Questions: {{{subjective_config.num_questions}}}
 Difficulty Level: {{{subjective_config.difficulty_level}}}
-Type: {{{subjective_config.type}}}
+Type: {{{subjective_config.type}}} (Should be TEXT for Short Answer and PARAGRAPH for Long Answer)
 {{/if}}
 
 {{#if fill_in_the_blanks_config}}
-Fill in the Blanks Configuration:
-Number of Options: {{{fill_in_the_blanks_config.num_options}}}
+Fill in the Blanks Configuration (use TEXT type):
+Number of Questions: {{{fill_in_the_blanks_config.num_options}}}
 Difficulty Level: {{{fill_in_the_blanks_config.difficulty_level}}}
 {{/if}}
 
@@ -117,7 +117,7 @@ Number of Fill in the Blanks: {{{mixed_config.num_fill_in_the_blanks}}}
 Difficulty Level: {{{mixed_config.difficulty_level}}}
 {{/if}}
 
-Generate the assessment questions based on these configurations.
+Generate the assessment questions based on these configurations. Ensure the 'type' in the output matches the requested question types.
 `,
 });
 
@@ -134,7 +134,7 @@ const generateAssessmentFlow = ai.defineFlow(
     if (!output?.questions) {
       throw new Error("Failed to generate assessment questions.");
     }
-    const generatedQuestions: Question[] = output.questions;
+    const generatedQuestions: FormQuestion[] = output.questions;
     
     // Step 2: Use the Google Forms Service
     const formsService = new GoogleFormsService(input.accessToken);
@@ -146,7 +146,7 @@ const generateAssessmentFlow = ai.defineFlow(
     const formId = await formsService.createForm(formTitle, formDescription);
 
     // Step 4: Add the generated questions to the form
-    await formsService.addQuizQuestions(formId, generatedQuestions);
+    await formsService.addQuestions(formId, generatedQuestions);
     
     // Step 5: Get the form details (including the public URL)
     const form = await formsService.getForm(formId);
