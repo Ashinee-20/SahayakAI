@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
@@ -6,8 +7,6 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Loader2, Sparkles, Download, Share2, Mic, StopCircle, Clipboard, ClipboardCheck } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
-
-const mimeType = 'audio/mpeg';
 
 export default function ClassNotesPage() {
   const [isLoading, setIsLoading] = useState(false);
@@ -43,7 +42,7 @@ export default function ClassNotesPage() {
         setRecordingTime(prev => prev + 1);
       }, 1000);
       
-      const mediaRecorder = new MediaRecorder(stream, { mimeType });
+      const mediaRecorder = new MediaRecorder(stream); // Let the browser choose the mimeType
       mediaRecorderRef.current = mediaRecorder;
       const chunks: Blob[] = [];
       
@@ -52,7 +51,7 @@ export default function ClassNotesPage() {
       };
 
       mediaRecorder.onstop = () => {
-        const blob = new Blob(chunks, { type: mimeType });
+        const blob = new Blob(chunks, { type: mediaRecorder.mimeType }); // Use the actual mimeType
         setAudioBlob(blob);
         stream.getTracks().forEach(track => track.stop());
         toast({ title: 'Recording stopped', description: 'You can now generate notes from the audio.' });
@@ -62,7 +61,11 @@ export default function ClassNotesPage() {
 
     } catch (err) {
       console.error('Error accessing microphone:', err);
-      toast({ variant: 'destructive', title: 'Microphone access denied', description: 'Please allow microphone access to record audio.' });
+      let errorMessage = 'An unknown error occurred.';
+      if (err instanceof Error) {
+          errorMessage = err.message;
+      }
+      toast({ variant: 'destructive', title: 'Microphone access denied', description: errorMessage });
     }
   };
 
