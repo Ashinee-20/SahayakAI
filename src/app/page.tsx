@@ -17,14 +17,11 @@ export default function LoginPage() {
     const provider = new GoogleAuthProvider();
     try {
       await signInWithPopup(auth, provider);
-      // The auth state change will be handled by a listener in a layout or provider component,
-      // which will then redirect to the correct page. For now, we manually redirect.
-      router.push('/home');
+      // The auth state change is handled by the AuthProvider, which will redirect.
     } catch (error) {
       console.error('Google Sign-In Error:', error);
       setIsLoading(false);
     }
-    // Don't setIsLoading(false) on success because the page will redirect
   };
 
   return (
