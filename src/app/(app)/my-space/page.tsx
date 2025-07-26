@@ -6,7 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { Button } from '@/components/ui/button';
-import { Eye, Pencil, Trash2, Loader2, BookOpen } from 'lucide-react';
+import { Eye, Pencil, Trash2, Loader2, BookOpen, User } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 import { getUserContent, listTextbooks, Content } from '@/services/firebase-service';
 import { Timestamp } from 'firebase/firestore';
@@ -16,14 +16,17 @@ type ContentWithId = Content & { id: string };
 type TextbookFile = { name: string; url: string };
 
 export default function MySpacePage() {
-  const { user } = useAuth();
+  const { user, isGuest } = useAuth();
   const [content, setContent] = useState<ContentWithId[]>([]);
   const [textbooks, setTextbooks] = useState<TextbookFile[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     async function loadData() {
-      if (!user) return;
+      if (!user || isGuest) {
+        setIsLoading(false);
+        return;
+      }
       setIsLoading(true);
       try {
         const [userContent, textbookFiles] = await Promise.all([
@@ -40,7 +43,7 @@ export default function MySpacePage() {
       }
     }
     loadData();
-  }, [user]);
+  }, [user, isGuest]);
   
   const formatDate = (timestamp: Timestamp) => {
     return timestamp.toDate().toLocaleDateString('en-US', {
@@ -99,6 +102,17 @@ export default function MySpacePage() {
          <div className="flex justify-center items-center h-64">
             <Loader2 className="h-12 w-12 animate-spin text-primary" />
          </div>
+      ) : isGuest ? (
+        <Card className="mt-8">
+            <CardContent className="flex flex-col items-center justify-center p-12 text-center">
+                <User className="h-16 w-16 text-muted-foreground mb-4" />
+                <h3 className="text-xl font-semibold mb-2">Sign in to view your space</h3>
+                <p className="text-muted-foreground mb-6">Create an account to save and manage all your generated content in one place.</p>
+                <Button asChild>
+                    <Link href="/">Sign In</Link>
+                </Button>
+            </CardContent>
+        </Card>
       ) : (
       <Tabs defaultValue="content" className="w-full">
         <TabsList className="grid w-full grid-cols-4">
