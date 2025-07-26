@@ -10,7 +10,6 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
-import FormData from 'form-data';
 
 const GenerateClassNotesInputSchema = z.object({
   audioDataUri: z
@@ -52,7 +51,7 @@ async function transcribeAudioWithElevenLabs(audioDataUri: string): Promise<stri
   }
   
   // Extract content type and base64 data from data URI
-  const parts = audioDataUri.match(/^data:(audio\/webm);base64,(.*)$/);
+  const parts = audioDataUri.match(/^data:(audio\/.*?);base64,(.*)$/);
   if (!parts) {
       throw new Error("Invalid audio data URI format.");
   }
@@ -62,19 +61,13 @@ async function transcribeAudioWithElevenLabs(audioDataUri: string): Promise<stri
   // Convert base64 to a Buffer
   const audioBuffer = Buffer.from(base64Data, 'base64');
   
-  const formData = new FormData();
-  formData.append('file', audioBuffer, {
-    filename: 'audio.webm',
-    contentType: mimeType,
-  });
-
   const response = await fetch('https://api.elevenlabs.io/v1/speech-to-text', {
     method: 'POST',
     headers: {
       'xi-api-key': apiKey,
-      ...formData.getHeaders(),
+      'Content-Type': mimeType
     },
-    body: formData,
+    body: audioBuffer,
   });
 
   if (!response.ok) {
