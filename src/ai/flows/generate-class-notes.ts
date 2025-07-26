@@ -1,22 +1,22 @@
 'use server';
 
 /**
- * @fileOverview Generates class notes from audio transcript using Gemini API.
+ * @fileOverview Generates class notes from audio transcript using ElevenLabs and Gemini.
  *
- * - generateClassNotes - A function that takes audio data and generates structured class notes.
+ * - generateClassNotes - A function that takes audio data, transcribes it, and generates structured class notes.
  * - GenerateClassNotesInput - The input type for the generateClassNotes function.
  * - GenerateClassNotesOutput - The return type for the generateClassNotes function.
  */
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
-import wav from 'wav';
+import FormData from 'form-data';
 
 const GenerateClassNotesInputSchema = z.object({
   audioDataUri: z
     .string()
     .describe(
-      'Audio recording of the class as a data URI that must include a MIME type and use Base64 encoding. Expected format: \'data:<mimetype>;base64,<encoded_data>\'.' 
+      'Audio recording of the class as a data URI that must include a MIME type and use Base64 encoding. Expected format: \'data:<mimetype>;base64,<encoded_data>\'.'
     ),
 });
 
@@ -32,65 +32,6 @@ export async function generateClassNotes(input: GenerateClassNotesInput): Promis
   return generateClassNotesFlow(input);
 }
 
-async function toWav(
-  pcmData: Buffer,
-  channels = 1,
-  rate = 24000,
-  sampleWidth = 2
-): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const writer = new wav.Writer({
-      channels,
-      sampleRate: rate,
-      bitDepth: sampleWidth * 8,
-    });
-
-    let bufs = [] as any[];
-    writer.on('error', reject);
-    writer.on('data', function (d) {
-      bufs.push(d);
-    });
-    writer.on('end', function () {
-      resolve(Buffer.concat(bufs).toString('base64'));
-    });
-
-    writer.write(pcmData);
-    writer.end();
-  });
-}
-
-const audioToText = ai.defineFlow(
-  {
-    name: 'audioSimple',
-    inputSchema: z.string(),
-    outputSchema: z.any(),
-  },
-  async (query) => {
-    const { media } = await ai.generate({
-      model: 'googleai/gemini-2.5-flash-preview-tts',
-      config: {
-        responseModalities: ['AUDIO'],
-        speechConfig: {
-          voiceConfig: {
-            prebuiltVoiceConfig: { voiceName: 'Algenib' },
-          },
-        },
-      },
-      prompt: query,
-    });
-    if (!media) {
-      throw new Error('no media returned');
-    }
-    const audioBuffer = Buffer.from(
-      media.url.substring(media.url.indexOf(',') + 1),
-      'base64'
-    );
-    return {
-      media: 'data:audio/wav;base64,' + (await toWav(audioBuffer)),
-    };
-  }
-);
-
 const generateClassNotesPrompt = ai.definePrompt({
   name: 'generateClassNotesPrompt',
   input: {schema: z.object({transcript: z.string()})},
@@ -104,6 +45,49 @@ const generateClassNotesPrompt = ai.definePrompt({
   `,
 });
 
+async function transcribeAudioWithElevenLabs(audioDataUri: string): Promise<string> {
+  const apiKey = process.env.ELEVENLABS_API_KEY;
+  if (!apiKey) {
+    throw new Error("ElevenLabs API key not found.");
+  }
+  
+  // Extract content type and base64 data from data URI
+  const parts = audioDataUri.match(/^data:(audio\/webm);base64,(.*)$/);
+  if (!parts) {
+      throw new Error("Invalid audio data URI format.");
+  }
+  const mimeType = parts[1];
+  const base64Data = parts[2];
+
+  // Convert base64 to a Buffer
+  const audioBuffer = Buffer.from(base64Data, 'base64');
+  
+  const formData = new FormData();
+  formData.append('file', audioBuffer, {
+    filename: 'audio.webm',
+    contentType: mimeType,
+  });
+
+  const response = await fetch('https://api.elevenlabs.io/v1/speech-to-text', {
+    method: 'POST',
+    headers: {
+      'xi-api-key': apiKey,
+      ...formData.getHeaders(),
+    },
+    body: formData,
+  });
+
+  if (!response.ok) {
+    const errorBody = await response.text();
+    console.error('ElevenLabs API Error:', errorBody);
+    throw new Error(`Failed to transcribe audio: ${response.statusText}`);
+  }
+
+  const result = await response.json();
+  return result.text;
+}
+
+
 const generateClassNotesFlow = ai.defineFlow(
   {
     name: 'generateClassNotesFlow',
@@ -111,12 +95,14 @@ const generateClassNotesFlow = ai.defineFlow(
     outputSchema: GenerateClassNotesOutputSchema,
   },
   async input => {
-    // Extract audio data from the data URI
-    const audioData = input.audioDataUri.split(',')[1];
+    // Step 1: Transcribe the audio using ElevenLabs
+    const transcript = await transcribeAudioWithElevenLabs(input.audioDataUri);
 
-    // Mock ElevenLabs API transcription (replace with actual API call in real implementation)
-    const transcript = `This is a mock transcript. Today we discussed the importance of photosynthesis. Photosynthesis is how plants convert light energy into chemical energy. Key concepts include chlorophyll, sunlight, water, and carbon dioxide. Remember the formula: 6CO2 + 6H2O + Light → C6H12O6 + 6O2.`;
+    if (!transcript) {
+        throw new Error("Transcription failed or returned empty.");
+    }
 
+    // Step 2: Generate notes from the transcript
     const {output} = await generateClassNotesPrompt({transcript});
     return output!;
   }
