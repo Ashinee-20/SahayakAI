@@ -35,9 +35,9 @@ const tools = [
   {
     href: '/create/visual-aid',
     title: 'Visual Aid',
-    description: 'Generate visual aids for your lessons. (Coming Soon)',
+    description: 'Generate a guide for creating visual aids for your lessons.',
     icon: ImageIcon,
-    disabled: true,
+    disabled: false,
   },
 ];
 
