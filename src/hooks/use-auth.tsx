@@ -37,11 +37,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const guestParam = searchParams.get('guest');
     if (guestParam === 'true') {
       setIsGuest(true);
-      if (pathname === '/') {
-        router.push('/home');
-      }
     }
-  }, [searchParams, pathname, router]);
+  }, [searchParams]);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
@@ -58,6 +55,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (!user && !isGuest && !isAuthPage) {
         router.push('/');
       } else if (user && isAuthPage) {
+        router.push('/home');
+      } else if(isGuest && isAuthPage) {
         router.push('/home');
       }
     }
