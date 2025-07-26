@@ -1,5 +1,5 @@
 import { AuthProvider } from '@/hooks/use-auth';
-import { सस्पेंस } from 'react';
+import { Suspense } from 'react';
 import { Loader2 } from 'lucide-react';
 
 export default function SuspenseAuthProvider({
@@ -8,7 +8,7 @@ export default function SuspenseAuthProvider({
   children: React.ReactNode;
 }) {
   return (
-    <सस्पेंस
+    <Suspense
       fallback={
         <div className="flex-1 flex items-center justify-center">
           <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -16,6 +16,6 @@ export default function SuspenseAuthProvider({
       }
     >
       <AuthProvider>{children}</AuthProvider>
-    </सस्पेंस>
+    </Suspense>
   );
 }
