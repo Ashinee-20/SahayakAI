@@ -12,17 +12,18 @@ import {
 } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
+import { useTranslation } from '@/hooks/use-translation';
 
 const navItems = [
-  { href: '/home', label: 'Home', icon: Home },
-  { href: '/create', label: 'Create', icon: LayoutGrid },
-  { href: '/my-space', label: 'My Space', icon: User },
-  { href: '/community', label: 'Community', icon: Users },
+  { href: '/home', labelKey: 'home', icon: Home },
+  { href: '/create', labelKey: 'create', icon: LayoutGrid },
+  { href: '/my-space', labelKey: 'mySpace', icon: User },
+  { href: '/community', labelKey: 'community', icon: Users },
 ];
 
 export default function MainSidebar() {
   const pathname = usePathname();
+  const { t } = useTranslation();
 
   return (
     <aside className="hidden md:flex flex-col w-64 border-r bg-card">
@@ -34,9 +35,9 @@ export default function MainSidebar() {
       </div>
       <div className="flex-1 overflow-auto py-4">
         <nav className="grid items-start px-4 text-sm font-medium">
-          {navItems.map(({ href, label, icon: Icon }) => (
+          {navItems.map(({ href, labelKey, icon: Icon }) => (
             <Link
-              key={label}
+              key={labelKey}
               href={href}
               className={cn(
                 'flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary hover:bg-muted',
@@ -44,7 +45,7 @@ export default function MainSidebar() {
               )}
             >
               <Icon className="h-4 w-4" />
-              {label}
+              {t(labelKey)}
             </Link>
           ))}
         </nav>
@@ -58,7 +59,7 @@ export default function MainSidebar() {
               )}
           >
             <Settings className="h-4 w-4" />
-            Settings
+            {t('settings')}
           </Link>
       </div>
     </aside>

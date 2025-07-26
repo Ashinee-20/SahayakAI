@@ -1,0 +1,20 @@
+{
+  "home": "Home",
+  "create": "Create",
+  "mySpace": "My Space",
+  "community": "Community",
+  "settings": "Settings",
+  "welcomeBack": "Welcome back, {userName}!",
+  "dashboardGlance": "Here's your dashboard at a glance.",
+  "lessonPlansCreated": "Lesson Plans Created",
+  "assessmentsGenerated": "Assessments Generated",
+  "storiesCrafted": "Stories Crafted",
+  "sinceLastWeek": "+{count} since last week",
+  "todaysClasses": "Today's Classes",
+  "todaysSchedule": "Your schedule for today. (Placeholder)",
+  "recentlyGenerated": "Recently Generated",
+  "recentCreations": "Your 5 most recent creations.",
+  "type": "Type",
+  "title": "Title",
+  "date": "Date"
+}

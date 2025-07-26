@@ -1,10 +1,11 @@
 import type { ReactNode } from 'react';
-import { AuthProvider } from '@/hooks/use-auth';
 import MainSidebar from '@/components/main-sidebar';
 import Header from '@/components/header';
+import { LanguageProvider } from '@/context/language-context';
 
 export default function AppLayout({ children }: { children: ReactNode }) {
   return (
+    <LanguageProvider>
       <div className="min-h-screen w-full flex">
         <MainSidebar />
         <div className="flex flex-col flex-1">
@@ -14,5 +15,6 @@ export default function AppLayout({ children }: { children: ReactNode }) {
           </main>
         </div>
       </div>
+    </LanguageProvider>
   );
 }

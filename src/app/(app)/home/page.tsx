@@ -11,11 +11,12 @@ import { useAuth } from '@/hooks/use-auth';
 import { BookOpen, FileText, Sparkles, Clock, Calendar } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
+import { useTranslation } from '@/hooks/use-translation';
 
 const stats = [
-  { title: 'Lesson Plans Created', value: '12', icon: BookOpen },
-  { title: 'Assessments Generated', value: '8', icon: FileText },
-  { title: 'Stories Crafted', value: '5', icon: Sparkles },
+  { titleKey: 'lessonPlansCreated', value: '12', icon: BookOpen },
+  { titleKey: 'assessmentsGenerated', value: '8', icon: FileText },
+  { titleKey: 'storiesCrafted', value: '5', icon: Sparkles },
 ];
 
 const recentItems = [
@@ -28,25 +29,26 @@ const recentItems = [
 
 export default function HomePage() {
   const { user, isGuest } = useAuth();
+  const { t } = useTranslation();
   const userName = user?.displayName?.split(' ')[0] || 'Guest';
 
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-3xl font-headline font-bold">Welcome back, {userName}!</h1>
-        <p className="text-muted-foreground">Here's your dashboard at a glance.</p>
+        <h1 className="text-3xl font-headline font-bold">{t('welcomeBack').replace('{userName}', userName)}</h1>
+        <p className="text-muted-foreground">{t('dashboardGlance')}</p>
       </div>
 
       <div className="grid gap-4 md:grid-cols-3">
         {stats.map((stat) => (
-          <Card key={stat.title}>
+          <Card key={stat.titleKey}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">{stat.title}</CardTitle>
+              <CardTitle className="text-sm font-medium">{t(stat.titleKey)}</CardTitle>
               <stat.icon className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{stat.value}</div>
-              <p className="text-xs text-muted-foreground">+2 since last week</p>
+              <p className="text-xs text-muted-foreground">{t('sinceLastWeek').replace('{count}', '2')}</p>
             </CardContent>
           </Card>
         ))}
@@ -57,9 +59,9 @@ export default function HomePage() {
             <CardHeader>
                 <CardTitle className="font-headline flex items-center gap-2">
                     <Calendar className="h-5 w-5" />
-                    Today's Classes
+                    {t('todaysClasses')}
                 </CardTitle>
-                <CardDescription>Your schedule for today. (Placeholder)</CardDescription>
+                <CardDescription>{t('todaysSchedule')}</CardDescription>
             </CardHeader>
             <CardContent>
                 <ul className="space-y-3">
@@ -89,16 +91,16 @@ export default function HomePage() {
         </Card>
         <Card>
             <CardHeader>
-                <CardTitle className="font-headline">Recently Generated</CardTitle>
-                <CardDescription>Your 5 most recent creations.</CardDescription>
+                <CardTitle className="font-headline">{t('recentlyGenerated')}</CardTitle>
+                <CardDescription>{t('recentCreations')}</CardDescription>
             </CardHeader>
             <CardContent>
                  <Table>
                     <TableHeader>
                         <TableRow>
-                        <TableHead>Type</TableHead>
-                        <TableHead>Title</TableHead>
-                        <TableHead>Date</TableHead>
+                        <TableHead>{t('type')}</TableHead>
+                        <TableHead>{t('title')}</TableHead>
+                        <TableHead>{t('date')}</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>

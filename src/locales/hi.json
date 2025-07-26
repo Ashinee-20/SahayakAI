@@ -1,0 +1,20 @@
+{
+  "home": "होम",
+  "create": "बनाएं",
+  "mySpace": "मेरी जगह",
+  "community": "समुदाय",
+  "settings": "सेटिंग्स",
+  "welcomeBack": "वापस स्वागत है, {userName}!",
+  "dashboardGlance": "यहां आपका डैशबोर्ड एक नज़र में है।",
+  "lessonPlansCreated": "बनाए गए पाठ योजना",
+  "assessmentsGenerated": "उत्पन्न मूल्यांकन",
+  "storiesCrafted": "रचित कहानियाँ",
+  "sinceLastWeek": "पिछले सप्ताह से +{count}",
+  "todaysClasses": "आज की कक्षाएं",
+  "todaysSchedule": "आज के लिए आपकी अनुसूची। (प्लेसहोल्डर)",
+  "recentlyGenerated": "हाल ही में उत्पन्न",
+  "recentCreations": "आपकी 5 सबसे हालिया रचनाएँ।",
+  "type": "प्रकार",
+  "title": "शीर्षक",
+  "date": "तारीख"
+}

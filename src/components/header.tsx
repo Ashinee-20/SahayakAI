@@ -19,17 +19,20 @@ import {
 } from 'lucide-react';
 import UserNav from './user-nav';
 import { cn } from '@/lib/utils';
+import { useTranslation } from '@/hooks/use-translation';
+import LanguageToggle from './language-toggle';
 
 const navItems = [
-  { href: '/home', label: 'Home', icon: Home },
-  { href: '/create', label: 'Create', icon: LayoutGrid },
-  { href: '/my-space', label: 'My Space', icon: User },
-  { href: '/community', label: 'Community', icon: Users },
-  { href: '/settings', label: 'Settings', icon: Settings },
+  { href: '/home', labelKey: 'home', icon: Home },
+  { href: '/create', labelKey: 'create', icon: LayoutGrid },
+  { href: '/my-space', labelKey: 'mySpace', icon: User },
+  { href: '/community', labelKey: 'community', icon: Users },
+  { href: '/settings', labelKey: 'settings', icon: Settings },
 ];
 
 export default function Header() {
   const pathname = usePathname();
+  const { t } = useTranslation();
 
   return (
     <header className="flex h-16 items-center gap-4 border-b bg-card px-4 md:px-6">
@@ -52,9 +55,9 @@ export default function Header() {
               <BookOpenCheck className="h-6 w-6 text-primary" />
               <span className="font-headline text-xl">Sahayak</span>
             </Link>
-            {navItems.map(({ href, label, icon: Icon }) => (
+            {navItems.map(({ href, labelKey, icon: Icon }) => (
               <Link
-                key={label}
+                key={labelKey}
                 href={href}
                 className={cn(
                   'flex items-center gap-4 rounded-xl px-3 py-2 text-muted-foreground hover:text-foreground',
@@ -62,7 +65,7 @@ export default function Header() {
                 )}
               >
                 <Icon className="h-5 w-5" />
-                {label}
+                {t(labelKey)}
               </Link>
             ))}
           </nav>
@@ -70,7 +73,7 @@ export default function Header() {
       </Sheet>
       <div className="flex w-full items-center gap-4 md:ml-auto md:gap-2 lg:gap-4">
         <div className="ml-auto flex-1 sm:flex-initial">
-          {/* Can add a search bar here if needed */}
+          <LanguageToggle />
         </div>
         <UserNav />
       </div>
