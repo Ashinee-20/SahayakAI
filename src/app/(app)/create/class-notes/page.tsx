@@ -8,6 +8,8 @@ import { Loader2, Mic, StopCircle, Share2, Download } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { useAuth } from '@/hooks/use-auth';
+import { useTranslation } from '@/hooks/use-translation';
+
 
 // The Recorder UI component
 const Recorder: React.FC<{
@@ -15,7 +17,8 @@ const Recorder: React.FC<{
   isProcessing: boolean;
   onToggleRecording: () => void;
   permissionError: string | null;
-}> = ({ isRecording, isProcessing, onToggleRecording, permissionError }) => {
+  t: (key: string) => string;
+}> = ({ isRecording, isProcessing, onToggleRecording, permissionError, t }) => {
   return (
     <div className="flex flex-col items-center space-y-4 w-full">
       <Button
@@ -36,12 +39,12 @@ const Recorder: React.FC<{
         {isRecording ? (
           <>
             <StopCircle className="w-8 h-8" />
-            <span>Stop Recording</span>
+            <span>{t('createClassNotes.buttons.stopRecording')}</span>
           </>
         ) : (
           <>
             <Mic className="w-8 h-8" />
-            <span>Start Recording</span>
+            <span>{t('createClassNotes.buttons.startRecording')}</span>
           </>
         )}
       </Button>
@@ -63,10 +66,11 @@ export default function ClassNotesPage() {
   const audioChunksRef = useRef<Blob[]>([]);
   const { toast } = useToast();
   const { user } = useAuth();
+  const { t } = useTranslation();
 
   const handleRecordingComplete = (blob: Blob) => {
     setAudioBlob(blob);
-    toast({ title: 'Recording stopped', description: 'You can now generate notes from the audio.' });
+    toast({ title: t('toast.info.recordingStoppedTitle'), description: t('toast.info.recordingStoppedDescription') });
   };
 
   const startRecording = useCallback(async () => {
@@ -94,13 +98,13 @@ export default function ClassNotesPage() {
         mediaRecorderRef.current.start();
       } catch (err) {
         console.error("Error accessing microphone:", err);
-        setPermissionError("Microphone access was denied. Please enable it in your browser settings and refresh the page.");
+        setPermissionError(t('toast.error.micAccessDenied'));
         setIsRecording(false);
       }
     } else {
-      setPermissionError("Audio recording is not supported by your browser.");
+      setPermissionError(t('toast.error.micNotSupported'));
     }
-  }, []);
+  }, [t]);
 
   const stopRecording = useCallback(() => {
     if (mediaRecorderRef.current) {
@@ -134,11 +138,11 @@ export default function ClassNotesPage() {
 
   const handleGenerateNotes = async () => {
     if (!audioBlob) {
-      toast({ variant: 'destructive', title: 'No audio recorded', description: 'Please record your class audio first.' });
+      toast({ variant: 'destructive', title: t('toast.error.noAudioTitle'), description: t('toast.error.noAudioDescription') });
       return;
     }
      if (!user) {
-        toast({ variant: "destructive", title: "Authentication Error", description: "You must be signed in to generate content." });
+        toast({ variant: "destructive", title: t('toast.error.authError'), description: t('toast.error.mustBeSignedIn') });
         return;
     }
     
@@ -147,15 +151,15 @@ export default function ClassNotesPage() {
 
     try {
       const audioDataUri = await blobToDataUri(audioBlob);
-      const result = await generateClassNotes({ audioDataUri, userId: user.uid });
+      const result = await generateClassNotes({ audioDataUri });
       setNotes(result);
-      toast({ title: "Notes generated successfully!", description: "Your structured notes have been saved to My Space."});
+      toast({ title: t('toast.success.notesGeneratedTitle'), description: t('toast.success.notesGeneratedDescription')});
     } catch (error) {
       console.error("Error generating notes:", error);
       toast({ 
         variant: 'destructive', 
-        title: 'Failed to generate notes.',
-        description: error instanceof Error ? error.message : "An unknown error occurred."
+        title: t('toast.error.notesGenerationFailedTitle'),
+        description: error instanceof Error ? error.message : t('toast.error.unknownError')
       });
     } finally {
       setIsProcessing(false);
@@ -174,15 +178,15 @@ export default function ClassNotesPage() {
   return (
     <div className="space-y-8 max-w-4xl mx-auto">
       <div>
-        <h1 className="text-3xl font-headline font-bold">Generate Class Notes</h1>
-        <p className="text-muted-foreground">Record your class audio to get it summarized into structured notes automatically.</p>
+        <h1 className="text-3xl font-headline font-bold">{t('createClassNotes.title')}</h1>
+        <p className="text-muted-foreground">{t('createClassNotes.subtitle')}</p>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>1. Audio Recorder</CardTitle>
+          <CardTitle>{t('createClassNotes.recorder.title')}</CardTitle>
           <CardDescription>
-            {isRecording ? 'Click stop when your class is finished.' : 'Click start to begin recording your class.'}
+            {isRecording ? t('createClassNotes.recorder.descriptionRecording') : t('createClassNotes.recorder.descriptionIdle')}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -191,19 +195,20 @@ export default function ClassNotesPage() {
             isProcessing={isProcessing}
             onToggleRecording={handleToggleRecording}
             permissionError={permissionError}
+            t={t}
           />
         </CardContent>
       </Card>
       
       <div className="flex justify-center">
          <Button onClick={handleGenerateNotes} disabled={isProcessing || !audioBlob} size="lg">
-            {isProcessing ? <><Loader2 className="mr-2 h-5 w-5 animate-spin" />Processing Audio...</> : <>2. Generate Notes from Audio</>}
+            {isProcessing ? <><Loader2 className="mr-2 h-5 w-5 animate-spin" />{t('buttons.processingAudio')}</> : <>{t('createClassNotes.buttons.generate')}</>}
           </Button>
       </div>
 
       {isProcessing && (
         <div className="text-center text-muted-foreground">
-            <p>Processing your audio... this may take a moment.</p>
+            <p>{t('createClassNotes.processingMessage')}</p>
         </div>
       )}
 
@@ -211,8 +216,8 @@ export default function ClassNotesPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
             <div>
-                <CardTitle>3. Generated Class Notes</CardTitle>
-                <CardDescription>Review the generated notes below.</CardDescription>
+                <CardTitle>{t('createClassNotes.results.title')}</CardTitle>
+                <CardDescription>{t('createClassNotes.results.description')}</CardDescription>
             </div>
              <div className="flex gap-2">
                 <Button variant="outline" size="icon"><Download className="h-4 w-4" /></Button>

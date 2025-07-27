@@ -10,7 +10,6 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
-import { saveContent } from '@/services/firebase-service';
 
 const GenerateStoryInputSchema = z.object({
   grade: z.string().describe('The grade level of the story.'),
@@ -18,7 +17,6 @@ const GenerateStoryInputSchema = z.object({
   topic: z.string().describe('The topic of the story.'),
   tone: z.enum(['Engaging', 'Serious', 'Humorous']).describe('The tone of the story.'),
   creativityLevel: z.enum(['Low', 'Medium', 'High']).describe('The creativity level of the story.'),
-  userId: z.string().describe('The user ID for saving the content.'),
 });
 
 export type GenerateStoryInput = z.infer<typeof GenerateStoryInputSchema>;
@@ -62,10 +60,6 @@ const generateStoryFlow = ai.defineFlow(
         throw new Error("Failed to generate a story.");
     }
     
-    // Save to Firestore
-    const title = `Story: ${input.topic}`;
-    await saveContent(input.userId, 'story', title, { story: output.story });
-
     return output;
   }
 );

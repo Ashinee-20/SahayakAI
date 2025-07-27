@@ -13,6 +13,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Loader2, Sparkles, Download, Share2, Image as ImageIcon } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
+import { useTranslation } from '@/hooks/use-translation';
 
 const formSchema = z.object({
   topic: z.string().min(3, 'Topic is required'),
@@ -23,6 +24,7 @@ export default function VisualAidPage() {
   const [result, setResult] = useState<GenerateVisualAidGuideOutput | null>(null);
   const { user } = useAuth();
   const { toast } = useToast();
+  const { t } = useTranslation();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -36,18 +38,18 @@ export default function VisualAidPage() {
     setResult(null);
 
     if (!user) {
-        toast({ variant: "destructive", title: "Authentication Error", description: "You must be signed in to generate content." });
+        toast({ variant: "destructive", title: t('toast.error.authError'), description: t('toast.error.mustBeSignedIn') });
         setIsLoading(false);
         return;
     }
 
     try {
-      const result = await generateVisualAidGuide({ ...values, userId: user.uid });
+      const result = await generateVisualAidGuide({ ...values });
       setResult(result);
-      toast({ title: "Visual Aid Generated", description: "Your guide and image have been created and saved to My Space."});
+      toast({ title: t('toast.success.visualAidGeneratedTitle'), description: t('toast.success.visualAidGeneratedDescription')});
     } catch (error) {
       console.error('Error generating visual aid guide:', error);
-      toast({ variant: 'destructive', title: 'Error', description: 'Failed to generate visual aid.' });
+      toast({ variant: 'destructive', title: t('toast.error.genericTitle'), description: t('toast.error.visualAidGenerationFailed') });
     } finally {
       setIsLoading(false);
     }
@@ -56,13 +58,13 @@ export default function VisualAidPage() {
   return (
     <div className="space-y-8 max-w-4xl mx-auto">
       <div>
-        <h1 className="text-3xl font-headline font-bold">Generate Visual Aid</h1>
-        <p className="text-muted-foreground">Describe a topic, and get a detailed guide and an AI-generated illustration for it.</p>
+        <h1 className="text-3xl font-headline font-bold">{t('createVisualAid.title')}</h1>
+        <p className="text-muted-foreground">{t('createVisualAid.subtitle')}</p>
       </div>
       <Card>
         <CardHeader>
-          <CardTitle>Illustration Topic</CardTitle>
-          <CardDescription>Provide the topic you want to create a visual aid for.</CardDescription>
+          <CardTitle>{t('createVisualAid.card.title')}</CardTitle>
+          <CardDescription>{t('createVisualAid.card.description')}</CardDescription>
         </CardHeader>
         <CardContent>
           <Form {...form}>
@@ -72,9 +74,9 @@ export default function VisualAidPage() {
                 name="topic"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Topic</FormLabel>
+                    <FormLabel>{t('form.topic.label')}</FormLabel>
                     <FormControl>
-                      <Textarea placeholder="e.g., The Water Cycle, The Human Heart, Photosynthesis" {...field} />
+                      <Textarea placeholder={t('form.topic.placeholderVisualAid')} {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -84,12 +86,12 @@ export default function VisualAidPage() {
                 {isLoading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Generating...
+                    {t('buttons.generating')}
                   </>
                 ) : (
                   <>
                     <ImageIcon className="mr-2 h-4 w-4" />
-                    Generate Visual Aid
+                    {t('createVisualAid.buttons.generate')}
                   </>
                 )}
               </Button>
@@ -101,8 +103,8 @@ export default function VisualAidPage() {
       {result?.imageDataUri && (
         <Card>
             <CardHeader>
-                <CardTitle>Generated Image</CardTitle>
-                <CardDescription>An AI-generated illustration based on the guide.</CardDescription>
+                <CardTitle>{t('createVisualAid.results.imageTitle')}</CardTitle>
+                <CardDescription>{t('createVisualAid.results.imageDescription')}</CardDescription>
             </CardHeader>
             <CardContent>
                 <div className="relative aspect-video w-full overflow-hidden rounded-lg border">
@@ -116,8 +118,8 @@ export default function VisualAidPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
             <div>
-                <CardTitle>Generated Illustration Guide</CardTitle>
-                <CardDescription>Use this guide to draw the visual aid, or to understand the generated image.</CardDescription>
+                <CardTitle>{t('createVisualAid.results.guideTitle')}</CardTitle>
+                <CardDescription>{t('createVisualAid.results.guideDescription')}</CardDescription>
             </div>
             <div className="flex gap-2">
                 <Button variant="outline" size="icon"><Download className="h-4 w-4" /></Button>

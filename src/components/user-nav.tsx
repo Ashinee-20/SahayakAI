@@ -14,11 +14,13 @@ import { useAuth } from '@/hooks/use-auth';
 import { getAuth, signOut } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
 import { LogIn, LogOut, Settings, User } from 'lucide-react';
+import { useTranslation } from '@/hooks/use-translation';
 
 export default function UserNav() {
   const { user, isGuest } = useAuth();
   const router = useRouter();
   const auth = getAuth();
+  const { t } = useTranslation();
 
   const handleSignOut = async () => {
     await signOut(auth);
@@ -41,7 +43,7 @@ export default function UserNav() {
     return (
          <Button onClick={handleSignIn}>
             <LogIn className="mr-2 h-4 w-4" />
-            Sign In
+            {t('signIn')}
         </Button>
     )
   }
@@ -68,16 +70,16 @@ export default function UserNav() {
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={() => router.push('/my-space')}>
           <User className="mr-2 h-4 w-4" />
-          <span>My Space</span>
+          <span>{t('mySpace')}</span>
         </DropdownMenuItem>
         <DropdownMenuItem onClick={() => router.push('/settings')}>
           <Settings className="mr-2 h-4 w-4" />
-          <span>Settings</span>
+          <span>{t('settings')}</span>
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={handleSignOut}>
           <LogOut className="mr-2 h-4 w-4" />
-          <span>Log out</span>
+          <span>{t('logOut')}</span>
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

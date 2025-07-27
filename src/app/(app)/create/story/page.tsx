@@ -13,6 +13,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Loader2, Sparkles, Download, Share2 } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
+import { useTranslation } from '@/hooks/use-translation';
 
 const formSchema = z.object({
   grade: z.string().min(1, 'Grade is required'),
@@ -27,6 +28,7 @@ export default function StoryPage() {
   const [story, setStory] = useState<string | null>(null);
   const { user } = useAuth();
   const { toast } = useToast();
+  const { t } = useTranslation();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -44,20 +46,20 @@ export default function StoryPage() {
     setStory(null);
 
     if (!user) {
-        toast({ variant: "destructive", title: "Authentication Error", description: "You must be signed in to generate content." });
+        toast({ variant: "destructive", title: t('toast.error.authError'), description: t('toast.error.mustBeSignedIn') });
         setIsLoading(false);
         return;
     }
 
-    const input: GenerateStoryInput = { ...values, userId: user.uid };
+    const input: GenerateStoryInput = { ...values };
 
     try {
       const result = await generateStory(input);
       setStory(result.story);
-      toast({ title: "Story Generated", description: "Your story has been created and saved to My Space."});
+      toast({ title: t('toast.success.storyGeneratedTitle'), description: t('toast.success.storyGeneratedDescription')});
     } catch (error) {
       console.error('Error generating story:', error);
-      toast({ variant: 'destructive', title: 'Error', description: 'Failed to generate story.' });
+      toast({ variant: 'destructive', title: t('toast.error.genericTitle'), description: t('toast.error.storyGenerationFailed') });
     } finally {
       setIsLoading(false);
     }
@@ -66,13 +68,13 @@ export default function StoryPage() {
   return (
     <div className="space-y-8 max-w-4xl mx-auto">
       <div>
-        <h1 className="text-3xl font-headline font-bold">Generate a Story</h1>
-        <p className="text-muted-foreground">Fill in the details to create an educational story with AI.</p>
+        <h1 className="text-3xl font-headline font-bold">{t('createStory.title')}</h1>
+        <p className="text-muted-foreground">{t('createStory.subtitle')}</p>
       </div>
       <Card>
         <CardHeader>
-          <CardTitle>Story Details</CardTitle>
-          <CardDescription>Provide the necessary information for the story.</CardDescription>
+          <CardTitle>{t('createStory.card.title')}</CardTitle>
+          <CardDescription>{t('createStory.card.description')}</CardDescription>
         </CardHeader>
         <CardContent>
           <Form {...form}>
@@ -83,16 +85,16 @@ export default function StoryPage() {
                   name="grade"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Grade</FormLabel>
+                      <FormLabel>{t('form.grade.label')}</FormLabel>
                       <Select onValueChange={field.onChange} defaultValue={field.value}>
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder="Select a grade" />
+                            <SelectValue placeholder={t('form.grade.placeholder')} />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
                           {Array.from({ length: 12 }, (_, i) => (
-                            <SelectItem key={i + 1} value={`Grade ${i + 1}`}>{`Grade ${i + 1}`}</SelectItem>
+                            <SelectItem key={i + 1} value={`Grade ${i + 1}`}>{t('form.grade.value', {grade: i + 1})}</SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
@@ -105,18 +107,18 @@ export default function StoryPage() {
                   name="subject"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Subject</FormLabel>
+                      <FormLabel>{t('form.subject.label')}</FormLabel>
                        <Select onValueChange={field.onChange} defaultValue={field.value}>
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder="Select a subject" />
+                            <SelectValue placeholder={t('form.subject.placeholder')} />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="Maths">Maths</SelectItem>
-                          <SelectItem value="Science">Science</SelectItem>
-                          <SelectItem value="English">English</SelectItem>
-                          <SelectItem value="History">History</SelectItem>
+                          <SelectItem value="Maths">{t('subjects.maths')}</SelectItem>
+                          <SelectItem value="Science">{t('subjects.science')}</SelectItem>
+                          <SelectItem value="English">{t('subjects.english')}</SelectItem>
+                          <SelectItem value="History">{t('subjects.history')}</SelectItem>
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -128,17 +130,17 @@ export default function StoryPage() {
                   name="tone"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Tone</FormLabel>
+                      <FormLabel>{t('form.tone.label')}</FormLabel>
                       <Select onValueChange={field.onChange} defaultValue={field.value}>
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder="Select a tone" />
+                            <SelectValue placeholder={t('form.tone.placeholder')} />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="Engaging">Engaging</SelectItem>
-                          <SelectItem value="Serious">Serious</SelectItem>
-                          <SelectItem value="Humorous">Humorous</SelectItem>
+                          <SelectItem value="Engaging">{t('form.tone.engaging')}</SelectItem>
+                          <SelectItem value="Serious">{t('form.tone.serious')}</SelectItem>
+                          <SelectItem value="Humorous">{t('form.tone.humorous')}</SelectItem>
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -150,17 +152,17 @@ export default function StoryPage() {
                   name="creativityLevel"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Creativity Level</FormLabel>
+                      <FormLabel>{t('form.creativity.label')}</FormLabel>
                       <Select onValueChange={field.onChange} defaultValue={field.value}>
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder="Select creativity level" />
+                            <SelectValue placeholder={t('form.creativity.placeholder')} />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="Low">Low</SelectItem>
-                          <SelectItem value="Medium">Medium</SelectItem>
-                          <SelectItem value="High">High</SelectItem>
+                          <SelectItem value="Low">{t('form.creativity.low')}</SelectItem>
+                          <SelectItem value="Medium">{t('form.creativity.medium')}</SelectItem>
+                          <SelectItem value="High">{t('form.creativity.high')}</SelectItem>
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -173,9 +175,9 @@ export default function StoryPage() {
                 name="topic"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Topic</FormLabel>
+                    <FormLabel>{t('form.topic.label')}</FormLabel>
                     <FormControl>
-                      <Textarea placeholder="e.g., The life of a water droplet, Why triangles are strong" {...field} />
+                      <Textarea placeholder={t('form.topic.placeholderStory')} {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -185,12 +187,12 @@ export default function StoryPage() {
                 {isLoading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Generating...
+                    {t('buttons.generating')}
                   </>
                 ) : (
                   <>
                     <Sparkles className="mr-2 h-4 w-4" />
-                    Generate Story
+                    {t('createStory.buttons.generate')}
                   </>
                 )}
               </Button>
@@ -203,8 +205,8 @@ export default function StoryPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
             <div>
-                <CardTitle>Generated Story</CardTitle>
-                <CardDescription>Review the generated story below.</CardDescription>
+                <CardTitle>{t('createStory.results.title')}</CardTitle>
+                <CardDescription>{t('createStory.results.description')}</CardDescription>
             </div>
             <div className="flex gap-2">
                 <Button variant="outline" size="icon"><Download className="h-4 w-4" /></Button>

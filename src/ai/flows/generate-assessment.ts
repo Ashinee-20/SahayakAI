@@ -13,7 +13,6 @@ import {
   GenerateAssessmentInput,
   GenerateAssessmentOutput
 } from '@/ai/schemas/assessment';
-import { saveContent } from '@/services/firebase-service';
 
 
 // Exported function that the frontend will call
@@ -85,7 +84,6 @@ const generateAssessmentFlow = ai.defineFlow(
       const generatedQuestions: FormQuestion[] = output.questions;
       
       const formTitle = `Assessment: ${input.subject} - ${input.topics_or_chapters}`;
-      const formDescription = `An assessment for Grade ${input.grade} on the topic of ${input.topics_or_chapters}.`;
 
       // Step 2: Create the Google Form
       const createFormResponse = await fetch('https://forms.googleapis.com/v1/forms', {
@@ -140,15 +138,7 @@ const generateAssessmentFlow = ai.defineFlow(
       }
       const finalForm = await getFormResponse.json();
 
-      // Step 5: Save to Firestore
-      await saveContent(
-          input.userId,
-          'assessment',
-          formTitle,
-          { formUrl: finalForm.responderUri, questions: generatedQuestions }
-      );
-
-      // Step 6: Return the URL and the raw questions
+      // Step 5: Return the URL and the raw questions
       return {
         formUrl: finalForm.responderUri,
         assessment: JSON.stringify(generatedQuestions, null, 2),

@@ -10,11 +10,9 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
-import { saveContent, uploadImageToStorage } from '@/services/firebase-service';
 
 const GenerateVisualAidGuideInputSchema = z.object({
   topic: z.string().describe('The topic or chapter for which to make an illustration.'),
-  userId: z.string().describe('The user ID for saving the content.'),
 });
 
 export type GenerateVisualAidGuideInput = z.infer<typeof GenerateVisualAidGuideInputSchema>;
@@ -52,7 +50,7 @@ const generateVisualAidGuideFlow = ai.defineFlow(
     inputSchema: GenerateVisualAidGuideInputSchema,
     outputSchema: GenerateVisualAidGuideOutputSchema,
   },
-  async ({ userId, topic }) => {
+  async ({ topic }) => {
     // Step 1: Generate the textual guide.
     const guideResponse = await generateVisualAidGuidePrompt({ topic });
     const guide = guideResponse.output?.guide;
@@ -79,15 +77,6 @@ const generateVisualAidGuideFlow = ai.defineFlow(
     if (!imageData?.url) {
         return { guide };
     }
-
-    // Step 3: Save to Firestore and Storage
-    const title = `Visual Aid: ${topic}`;
-    const contentId = await saveContent(userId, 'visualAid', title, { guide, imageUrl: '' }); // Save placeholder first
-    
-    const imageUrl = await uploadImageToStorage(imageData.url, userId, contentId);
-    
-    // This is where you would update the firestore document with the real URL, but for simplicity we will skip this step.
-    // The current implementation will store an empty imageUrl. A more robust solution would update it.
 
     return {
       guide,

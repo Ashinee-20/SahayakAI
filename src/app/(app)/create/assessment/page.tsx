@@ -18,6 +18,7 @@ import { useAuth } from '@/hooks/use-auth';
 import Link from 'next/link';
 import { getAuth, GoogleAuthProvider, signInWithRedirect, getRedirectResult, onAuthStateChanged } from 'firebase/auth';
 import { app } from '@/lib/firebase';
+import { useTranslation } from '@/hooks/use-translation';
 
 const formSchema = z.object({
   grade: z.string().min(1, 'Grade is required'),
@@ -47,6 +48,7 @@ export default function AssessmentPage() {
   const { toast } = useToast();
   const { user } = useAuth();
   const auth = getAuth(app);
+  const { t } = useTranslation();
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -79,12 +81,12 @@ export default function AssessmentPage() {
               await runAssessmentGeneration(values, credential.accessToken);
             }
           } else {
-             toast({ variant: "destructive", title: "Authentication Error", description: "Could not get credentials from Google. Please try again." });
+             toast({ variant: "destructive", title: t('toast.error.authError'), description: t('toast.error.googleCredentials') });
           }
         }
       } catch (error) {
         console.error('Error getting redirect result:', error);
-        toast({ variant: "destructive", title: "Authentication Failed", description: "Could not complete the sign-in process." });
+        toast({ variant: "destructive", title: t('toast.error.authFailed'), description: t('toast.error.signInProcess') });
       } finally {
         setIsLoading(false);
       }
@@ -108,7 +110,6 @@ export default function AssessmentPage() {
         assessment_type: values.assessment_type,
         topics_or_chapters: values.topics_or_chapters,
         accessToken: accessToken,
-        userId: user.uid,
       };
 
       if (values.assessment_type === 'Quiz' || values.assessment_type === 'Mixed') {
@@ -132,12 +133,12 @@ export default function AssessmentPage() {
       setFormUrl(assessmentData.formUrl);
 
       toast({
-        title: "Assessment & Google Form Created!",
-        description: "Your questions are below and a Google Form has been generated.",
+        title: t('toast.success.assessmentCreatedTitle'),
+        description: t('toast.success.assessmentCreatedDescription'),
         action: (
             <Button asChild variant="outline">
                 <Link href={assessmentData.formUrl} target="_blank" rel="noopener noreferrer">
-                    Open Form <ExternalLink className="ml-2 h-4 w-4" />
+                    {t('createAssessment.buttons.openForm')} <ExternalLink className="ml-2 h-4 w-4" />
                 </Link>
             </Button>
         )
@@ -147,8 +148,8 @@ export default function AssessmentPage() {
       console.error('Error generating assessment:', error);
       toast({
         variant: "destructive",
-        title: "Uh oh! Something went wrong.",
-        description: (error as Error).message || "There was a problem with your request. Ensure the Google Forms API is enabled in your Google Cloud project.",
+        title: t('toast.error.genericTitle'),
+        description: (error as Error).message || t('toast.error.assessmentRequest'),
       })
     } finally {
       setIsLoading(false);
@@ -158,7 +159,7 @@ export default function AssessmentPage() {
 
   async function onSubmit(values: FormData) {
     if (!user) {
-        toast({ variant: "destructive", title: "Authentication Error", description: "You must be signed in to generate an assessment." });
+        toast({ variant: "destructive", title: t('toast.error.authError'), description: t('toast.error.mustBeSignedIn') });
         return;
     }
     
@@ -175,13 +176,13 @@ export default function AssessmentPage() {
   return (
     <div className="space-y-8 max-w-4xl mx-auto">
       <div>
-        <h1 className="text-3xl font-headline font-bold">Generate Assessment</h1>
-        <p className="text-muted-foreground">Fill in the details to create a new assessment and a Google Form with AI.</p>
+        <h1 className="text-3xl font-headline font-bold">{t('createAssessment.title')}</h1>
+        <p className="text-muted-foreground">{t('createAssessment.subtitle')}</p>
       </div>
       <Card>
         <CardHeader>
-          <CardTitle>Assessment Details</CardTitle>
-          <CardDescription>Provide the necessary information for the assessment.</CardDescription>
+          <CardTitle>{t('createAssessment.card.title')}</CardTitle>
+          <CardDescription>{t('createAssessment.card.description')}</CardDescription>
         </CardHeader>
         <CardContent>
           <Form {...form}>
@@ -193,12 +194,12 @@ export default function AssessmentPage() {
                   name="grade"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Grade</FormLabel>
+                      <FormLabel>{t('form.grade.label')}</FormLabel>
                       <Select onValueChange={field.onChange} defaultValue={field.value}>
                         <FormControl>
-                          <SelectTrigger><SelectValue placeholder="Select a grade" /></SelectTrigger>
+                          <SelectTrigger><SelectValue placeholder={t('form.grade.placeholder')} /></SelectTrigger>
                         </FormControl>
-                        <SelectContent>{Array.from({ length: 12 }, (_, i) => (<SelectItem key={i + 1} value={`${i + 1}`}>Grade {i + 1}</SelectItem>))}</SelectContent>
+                        <SelectContent>{Array.from({ length: 12 }, (_, i) => (<SelectItem key={i + 1} value={`${i + 1}`}>{t('form.grade.value', {grade: i+1})}</SelectItem>))}</SelectContent>
                       </Select>
                       <FormMessage />
                     </FormItem>
@@ -209,13 +210,13 @@ export default function AssessmentPage() {
                   name="subject"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Subject</FormLabel>
+                      <FormLabel>{t('form.subject.label')}</FormLabel>
                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl><SelectTrigger><SelectValue placeholder="Select a subject" /></SelectTrigger></FormControl>
+                        <FormControl><SelectTrigger><SelectValue placeholder={t('form.subject.placeholder')} /></SelectTrigger></FormControl>
                         <SelectContent>
-                          <SelectItem value="Maths">Maths</SelectItem>
-                          <SelectItem value="Science">Science</SelectItem>
-                          <SelectItem value="English">English</SelectItem>
+                          <SelectItem value="Maths">{t('subjects.maths')}</SelectItem>
+                          <SelectItem value="Science">{t('subjects.science')}</SelectItem>
+                          <SelectItem value="English">{t('subjects.english')}</SelectItem>
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -227,10 +228,10 @@ export default function AssessmentPage() {
                   name="textbooks"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Textbook</FormLabel>
+                      <FormLabel>{t('form.textbook.label')}</FormLabel>
                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl><SelectTrigger><SelectValue placeholder="Select a textbook" /></SelectTrigger></FormControl>
-                        <SelectContent><SelectItem value="NCERT">NCERT (Placeholder)</SelectItem></SelectContent>
+                        <FormControl><SelectTrigger><SelectValue placeholder={t('form.textbook.placeholder')} /></SelectTrigger></FormControl>
+                        <SelectContent><SelectItem value="NCERT">{t('form.textbook.value')}</SelectItem></SelectContent>
                       </Select>
                       <FormMessage />
                     </FormItem>
@@ -241,13 +242,13 @@ export default function AssessmentPage() {
                   name="assessment_type"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Assessment Type</FormLabel>
+                      <FormLabel>{t('form.assessmentType.label')}</FormLabel>
                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl><SelectTrigger><SelectValue placeholder="Select a type" /></SelectTrigger></FormControl>
+                        <FormControl><SelectTrigger><SelectValue placeholder={t('form.assessmentType.placeholder')} /></SelectTrigger></FormControl>
                         <SelectContent>
-                          <SelectItem value="Quiz">Quiz (Multiple Choice)</SelectItem>
-                          <SelectItem value="Descriptive">Descriptive (Text Questions)</SelectItem>
-                          <SelectItem value="Mixed">Mixed</SelectItem>
+                          <SelectItem value="Quiz">{t('form.assessmentType.quiz')}</SelectItem>
+                          <SelectItem value="Descriptive">{t('form.assessmentType.descriptive')}</SelectItem>
+                          <SelectItem value="Mixed">{t('form.assessmentType.mixed')}</SelectItem>
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -259,22 +260,22 @@ export default function AssessmentPage() {
               {/* Conditional Fields */}
               {(assessmentType === 'Quiz' || assessmentType === 'Mixed') && (
                 <div className="p-4 border rounded-lg bg-muted/50 space-y-4">
-                  <h3 className="font-semibold">Multiple Choice Settings</h3>
+                  <h3 className="font-semibold">{t('createAssessment.quizSettings.title')}</h3>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-                     <FormField control={form.control} name="quiz_num_questions" render={({ field }) => (<FormItem><FormLabel># Questions</FormLabel><FormControl><Input type="number" placeholder="10" {...field} /></FormControl></FormItem>)} />
-                     <FormField control={form.control} name="quiz_num_options" render={({ field }) => (<FormItem><FormLabel># Options</FormLabel><FormControl><Input type="number" placeholder="4" {...field} /></FormControl></FormItem>)} />
-                     <FormField control={form.control} name="quiz_difficulty" render={({ field }) => (<FormItem><FormLabel>Difficulty</FormLabel><Select onValueChange={field.onChange}><FormControl><SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger></FormControl><SelectContent><SelectItem value="Easy">Easy</SelectItem><SelectItem value="Medium">Medium</SelectItem><SelectItem value="Hard">Hard</SelectItem></SelectContent></Select></FormItem>)} />
-                     <FormField control={form.control} name="quiz_type" render={({ field }) => (<FormItem><FormLabel>Type</FormLabel><Select onValueChange={field.onChange}><FormControl><SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger></FormControl><SelectContent><SelectItem value="Single Correct">Single Correct</SelectItem><SelectItem value="Multi Correct">Multi Correct</SelectItem><SelectItem value="Both">Both</SelectItem></SelectContent></Select></FormItem>)} />
+                     <FormField control={form.control} name="quiz_num_questions" render={({ field }) => (<FormItem><FormLabel>{t('form.numQuestions')}</FormLabel><FormControl><Input type="number" placeholder="10" {...field} /></FormControl></FormItem>)} />
+                     <FormField control={form.control} name="quiz_num_options" render={({ field }) => (<FormItem><FormLabel>{t('form.numOptions')}</FormLabel><FormControl><Input type="number" placeholder="4" {...field} /></FormControl></FormItem>)} />
+                     <FormField control={form.control} name="quiz_difficulty" render={({ field }) => (<FormItem><FormLabel>{t('form.difficulty.label')}</FormLabel><Select onValueChange={field.onChange}><FormControl><SelectTrigger><SelectValue placeholder={t('form.difficulty.placeholder')} /></SelectTrigger></FormControl><SelectContent><SelectItem value="Easy">{t('form.difficulty.easy')}</SelectItem><SelectItem value="Medium">{t('form.difficulty.medium')}</SelectItem><SelectItem value="Hard">{t('form.difficulty.hard')}</SelectItem></SelectContent></Select></FormItem>)} />
+                     <FormField control={form.control} name="quiz_type" render={({ field }) => (<FormItem><FormLabel>{t('form.type')}</FormLabel><Select onValueChange={field.onChange}><FormControl><SelectTrigger><SelectValue placeholder={t('form.difficulty.placeholder')} /></SelectTrigger></FormControl><SelectContent><SelectItem value="Single Correct">{t('form.quizType.single')}</SelectItem><SelectItem value="Multi Correct">{t('form.quizType.multi')}</SelectItem><SelectItem value="Both">{t('form.quizType.both')}</SelectItem></SelectContent></Select></FormItem>)} />
                   </div>
                 </div>
               )}
                {(assessmentType === 'Descriptive' || assessmentType === 'Mixed') && (
                 <div className="p-4 border rounded-lg bg-muted/50 space-y-4">
-                  <h3 className="font-semibold">Descriptive Settings</h3>
+                  <h3 className="font-semibold">{t('createAssessment.descriptiveSettings.title')}</h3>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                     <FormField control={form.control} name="desc_num_questions" render={({ field }) => (<FormItem><FormLabel># Questions</FormLabel><FormControl><Input type="number" placeholder="5" {...field} /></FormControl></FormItem>)} />
-                     <FormField control={form.control} name="desc_difficulty" render={({ field }) => (<FormItem><FormLabel>Difficulty</FormLabel><Select onValueChange={field.onChange}><FormControl><SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger></FormControl><SelectContent><SelectItem value="Easy">Easy</SelectItem><SelectItem value="Medium">Medium</SelectItem><SelectItem value="Hard">Hard</SelectItem></SelectContent></Select></FormItem>)} />
-                     <FormField control={form.control} name="desc_type" render={({ field }) => (<FormItem><FormLabel>Type</FormLabel><Select onValueChange={field.onChange}><FormControl><SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger></FormControl><SelectContent><SelectItem value="Short Answer">Short Answer</SelectItem><SelectItem value="Long Answer">Long Answer</SelectItem><SelectItem value="Both">Both</SelectItem></SelectContent></Select></FormItem>)} />
+                     <FormField control={form.control} name="desc_num_questions" render={({ field }) => (<FormItem><FormLabel>{t('form.numQuestions')}</FormLabel><FormControl><Input type="number" placeholder="5" {...field} /></FormControl></FormItem>)} />
+                     <FormField control={form.control} name="desc_difficulty" render={({ field }) => (<FormItem><FormLabel>{t('form.difficulty.label')}</FormLabel><Select onValueChange={field.onChange}><FormControl><SelectTrigger><SelectValue placeholder={t('form.difficulty.placeholder')} /></SelectTrigger></FormControl><SelectContent><SelectItem value="Easy">{t('form.difficulty.easy')}</SelectItem><SelectItem value="Medium">{t('form.difficulty.medium')}</SelectItem><SelectItem value="Hard">{t('form.difficulty.hard')}</SelectItem></SelectContent></Select></FormItem>)} />
+                     <FormField control={form.control} name="desc_type" render={({ field }) => (<FormItem><FormLabel>{t('form.type')}</FormLabel><Select onValueChange={field.onChange}><FormControl><SelectTrigger><SelectValue placeholder={t('form.difficulty.placeholder')} /></SelectTrigger></FormControl><SelectContent><SelectItem value="Short Answer">{t('form.descType.short')}</SelectItem><SelectItem value="Long Answer">{t('form.descType.long')}</SelectItem><SelectItem value="Both">{t('form.descType.both')}</SelectItem></SelectContent></Select></FormItem>)} />
                   </div>
                 </div>
               )}
@@ -284,16 +285,16 @@ export default function AssessmentPage() {
                 name="topics_or_chapters"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Topics/Chapter Numbers</FormLabel>
+                    <FormLabel>{t('form.topics.label')}</FormLabel>
                     <FormControl>
-                      <Textarea placeholder="e.g., Chapters 1-3, or topics like Photosynthesis, Algebra" {...field} />
+                      <Textarea placeholder={t('form.topics.placeholder')} {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
               <Button type="submit" disabled={isLoading} className="bg-gradient-to-r from-primary to-accent text-primary-foreground hover:scale-105 transition-transform duration-200">
-                {isLoading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Processing...</> : <><Sparkles className="mr-2 h-4 w-4" />Generate Assessment</>}
+                {isLoading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />{t('buttons.processing')}</> : <><Sparkles className="mr-2 h-4 w-4" />{t('createAssessment.buttons.generate')}</>}
               </Button>
             </form>
           </Form>
@@ -303,13 +304,13 @@ export default function AssessmentPage() {
       {formUrl && (
          <Card>
             <CardHeader>
-                <CardTitle>Google Form Created!</CardTitle>
-                <CardDescription>A Google Form has been created and populated with the questions.</CardDescription>
+                <CardTitle>{t('createAssessment.results.formCreatedTitle')}</CardTitle>
+                <CardDescription>{t('createAssessment.results.formCreatedDescription')}</CardDescription>
             </CardHeader>
             <CardContent>
                  <Button asChild>
                     <Link href={formUrl} target="_blank" rel="noopener noreferrer">
-                       Open Google Form <ExternalLink className="ml-2 h-4 w-4" />
+                       {t('createAssessment.buttons.openForm')} <ExternalLink className="ml-2 h-4 w-4" />
                     </Link>
                 </Button>
             </CardContent>
@@ -320,8 +321,8 @@ export default function AssessmentPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
             <div>
-                <CardTitle>Generated Questions (JSON)</CardTitle>
-                <CardDescription>Review the generated questions below. These were used to create the form.</CardDescription>
+                <CardTitle>{t('createAssessment.results.questionsTitle')}</CardTitle>
+                <CardDescription>{t('createAssessment.results.questionsDescription')}</CardDescription>
             </div>
             <div className="flex gap-2">
                 <Button variant="outline" size="icon"><Download className="h-4 w-4" /></Button>

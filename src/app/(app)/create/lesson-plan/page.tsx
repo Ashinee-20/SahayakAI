@@ -14,6 +14,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Loader2, Sparkles, Download, Share2 } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
+import { useTranslation } from '@/hooks/use-translation';
 
 const formSchema = z.object({
   grade: z.string().min(1, 'Grade is required'),
@@ -28,6 +29,7 @@ export default function LessonPlanPage() {
   const [lessonPlan, setLessonPlan] = useState<string | null>(null);
   const { user } = useAuth();
   const { toast } = useToast();
+  const { t } = useTranslation();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -45,7 +47,7 @@ export default function LessonPlanPage() {
     setLessonPlan(null);
     
     if (!user) {
-        toast({ variant: "destructive", title: "Authentication Error", description: "You must be signed in to generate content." });
+        toast({ variant: "destructive", title: t('toast.error.authError'), description: t('toast.error.mustBeSignedIn') });
         setIsLoading(false);
         return;
     }
@@ -53,17 +55,16 @@ export default function LessonPlanPage() {
     const input: GenerateLessonPlanInput = {
       ...values,
       textbooks: [values.textbooks],
-      userId: user.uid,
     };
 
     try {
       const result = await generateLessonPlan(input);
       const parsedPlan = JSON.parse(result.lessonPlan);
       setLessonPlan(JSON.stringify(parsedPlan, null, 2));
-      toast({ title: "Lesson Plan Generated", description: "Your lesson plan has been created and saved to My Space."});
+      toast({ title: t('toast.success.lessonPlanGeneratedTitle'), description: t('toast.success.lessonPlanGeneratedDescription')});
     } catch (error) {
       console.error('Error generating lesson plan:', error);
-      toast({ variant: 'destructive', title: 'Error', description: 'Failed to generate lesson plan.' });
+      toast({ variant: 'destructive', title: t('toast.error.genericTitle'), description: t('toast.error.lessonPlanGenerationFailed') });
     } finally {
       setIsLoading(false);
     }
@@ -72,13 +73,13 @@ export default function LessonPlanPage() {
   return (
     <div className="space-y-8 max-w-4xl mx-auto">
       <div>
-        <h1 className="text-3xl font-headline font-bold">Generate Lesson Plan</h1>
-        <p className="text-muted-foreground">Fill in the details to create a new lesson plan with AI.</p>
+        <h1 className="text-3xl font-headline font-bold">{t('createLessonPlan.title')}</h1>
+        <p className="text-muted-foreground">{t('createLessonPlan.subtitle')}</p>
       </div>
       <Card>
         <CardHeader>
-          <CardTitle>Lesson Plan Details</CardTitle>
-          <CardDescription>Provide the necessary information for the lesson plan.</CardDescription>
+          <CardTitle>{t('createLessonPlan.card.title')}</CardTitle>
+          <CardDescription>{t('createLessonPlan.card.description')}</CardDescription>
         </CardHeader>
         <CardContent>
           <Form {...form}>
@@ -89,16 +90,16 @@ export default function LessonPlanPage() {
                   name="grade"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Grade</FormLabel>
+                      <FormLabel>{t('form.grade.label')}</FormLabel>
                       <Select onValueChange={field.onChange} defaultValue={field.value}>
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder="Select a grade" />
+                            <SelectValue placeholder={t('form.grade.placeholder')} />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
                           {Array.from({ length: 12 }, (_, i) => (
-                            <SelectItem key={i + 1} value={`${i + 1}`}>Grade {i + 1}</SelectItem>
+                            <SelectItem key={i + 1} value={`${i + 1}`}>{t('form.grade.value', {grade: i + 1})}</SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
@@ -111,19 +112,19 @@ export default function LessonPlanPage() {
                   name="subject"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Subject</FormLabel>
+                      <FormLabel>{t('form.subject.label')}</FormLabel>
                        <Select onValueChange={field.onChange} defaultValue={field.value}>
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder="Select a subject" />
+                            <SelectValue placeholder={t('form.subject.placeholder')} />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="Maths">Maths</SelectItem>
-                          <SelectItem value="Science">Science</SelectItem>
-                          <SelectItem value="English">English</SelectItem>
-                          <SelectItem value="History">History</SelectItem>
-                           <SelectItem value="Geography">Geography</SelectItem>
+                          <SelectItem value="Maths">{t('subjects.maths')}</SelectItem>
+                          <SelectItem value="Science">{t('subjects.science')}</SelectItem>
+                          <SelectItem value="English">{t('subjects.english')}</SelectItem>
+                          <SelectItem value="History">{t('subjects.history')}</SelectItem>
+                           <SelectItem value="Geography">{t('subjects.geography')}</SelectItem>
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -135,16 +136,16 @@ export default function LessonPlanPage() {
                   name="textbooks"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Textbook</FormLabel>
+                      <FormLabel>{t('form.textbook.label')}</FormLabel>
                       <Select onValueChange={field.onChange} defaultValue={field.value}>
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder="Select a textbook" />
+                            <SelectValue placeholder={t('form.textbook.placeholder')} />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="NCERT Maths Grade 8">NCERT Maths Grade 8 (Placeholder)</SelectItem>
-                           <SelectItem value="NCERT Science Grade 8">NCERT Science Grade 8 (Placeholder)</SelectItem>
+                          <SelectItem value="NCERT Maths Grade 8">{t('form.textbook.mathsPlaceholder')}</SelectItem>
+                           <SelectItem value="NCERT Science Grade 8">{t('form.textbook.sciencePlaceholder')}</SelectItem>
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -156,7 +157,7 @@ export default function LessonPlanPage() {
                   name="numClasses"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Number of Classes</FormLabel>
+                      <FormLabel>{t('form.numClasses.label')}</FormLabel>
                       <FormControl>
                         <Input type="number" min="1" {...field} />
                       </FormControl>
@@ -170,9 +171,9 @@ export default function LessonPlanPage() {
                 name="topicsOrChapters"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Topics/Chapter Numbers</FormLabel>
+                    <FormLabel>{t('form.topics.label')}</FormLabel>
                     <FormControl>
-                      <Textarea placeholder="e.g., Chapters 1-3, or topics like Photosynthesis, Algebra" {...field} />
+                      <Textarea placeholder={t('form.topics.placeholder')} {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -182,12 +183,12 @@ export default function LessonPlanPage() {
                 {isLoading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Generating...
+                    {t('buttons.generating')}
                   </>
                 ) : (
                   <>
                     <Sparkles className="mr-2 h-4 w-4" />
-                    Generate Lesson Plan
+                    {t('createLessonPlan.buttons.generate')}
                   </>
                 )}
               </Button>
@@ -200,8 +201,8 @@ export default function LessonPlanPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
             <div>
-                <CardTitle>Generated Lesson Plan</CardTitle>
-                <CardDescription>Review the generated plan below.</CardDescription>
+                <CardTitle>{t('createLessonPlan.results.title')}</CardTitle>
+                <CardDescription>{t('createLessonPlan.results.description')}</CardDescription>
             </div>
             <div className="flex gap-2">
                 <Button variant="outline" size="icon"><Download className="h-4 w-4" /></Button>

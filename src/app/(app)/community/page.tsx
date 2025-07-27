@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import { useTranslation } from '@/hooks/use-translation';
 
 const initialCommunityPosts = [
   {
@@ -69,6 +70,7 @@ export default function CommunityPage() {
   const [posts, setPosts] = useState(initialCommunityPosts);
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
   const [adaptedContent, setAdaptedContent] = useState('');
+  const { t } = useTranslation();
 
   const handleAdaptClick = (post: Post) => {
     setSelectedPost(post);
@@ -86,32 +88,32 @@ export default function CommunityPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-3xl font-headline font-bold">Community Hub</h1>
-        <p className="text-muted-foreground">Share, discover, and adapt content from fellow educators.</p>
+        <h1 className="text-3xl font-headline font-bold">{t('community.title')}</h1>
+        <p className="text-muted-foreground">{t('community.subtitle')}</p>
       </div>
 
       <Card>
         <CardHeader>
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             <div>
-              <CardTitle>Community Feed</CardTitle>
-              <CardDescription>Find resources shared by other teachers.</CardDescription>
+              <CardTitle>{t('community.feed.title')}</CardTitle>
+              <CardDescription>{t('community.feed.description')}</CardDescription>
             </div>
              <Button>
-                <Upload className="mr-2 h-4 w-4" /> Share Your Content
+                <Upload className="mr-2 h-4 w-4" /> {t('community.buttons.share')}
             </Button>
           </div>
         </CardHeader>
         <CardContent>
           <div className="flex flex-col md:flex-row gap-4 mb-6">
-            <Input placeholder="Search content..." className="flex-1" />
+            <Input placeholder={t('community.searchPlaceholder')} className="flex-1" />
             <div className="flex flex-wrap gap-4">
               <Select>
                 <SelectTrigger className="w-full md:w-[160px]">
-                  <SelectValue placeholder="Filter by Grade" />
+                  <SelectValue placeholder={t('community.filters.grade')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Grades</SelectItem>
+                  <SelectItem value="all">{t('community.filters.allGrades')}</SelectItem>
                   <SelectItem value="3">Grade 3</SelectItem>
                   <SelectItem value="5">Grade 5</SelectItem>
                   <SelectItem value="7">Grade 7</SelectItem>
@@ -119,21 +121,21 @@ export default function CommunityPage() {
               </Select>
                <Select>
                 <SelectTrigger className="w-full md:w-[160px]">
-                  <SelectValue placeholder="Filter by Subject" />
+                  <SelectValue placeholder={t('community.filters.subject')} />
                 </SelectTrigger>
                 <SelectContent>
-                   <SelectItem value="all">All Subjects</SelectItem>
+                   <SelectItem value="all">{t('community.filters.allSubjects')}</SelectItem>
                    <SelectItem value="Science">Science</SelectItem>
                    <SelectItem value="Maths">Maths</SelectItem>
                 </SelectContent>
               </Select>
                <Select>
                 <SelectTrigger className="w-full md:w-[160px]">
-                  <SelectValue placeholder="Sort by" />
+                  <SelectValue placeholder={t('community.filters.sortBy')} />
                 </SelectTrigger>
                 <SelectContent>
-                   <SelectItem value="rating">Highest Rating</SelectItem>
-                   <SelectItem value="recent">Most Recent</SelectItem>
+                   <SelectItem value="rating">{t('community.filters.highestRating')}</SelectItem>
+                   <SelectItem value="recent">{t('community.filters.mostRecent')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -179,18 +181,18 @@ export default function CommunityPage() {
                                 className="bg-gradient-to-r from-primary to-accent text-primary-foreground hover:scale-105 transition-transform duration-200"
                                 onClick={() => handleAdaptClick(post)}
                             >
-                                Preview & Adapt
+                                {t('community.buttons.previewAndAdapt')}
                             </Button>
                         </DialogTrigger>
                         <DialogContent className="sm:max-w-[600px]">
                             <DialogHeader>
-                            <DialogTitle>Preview & Adapt: {selectedPost?.title}</DialogTitle>
+                            <DialogTitle>{t('community.adaptModal.title')}: {selectedPost?.title}</DialogTitle>
                             <DialogDescription>
-                                Review the content below. You can edit it here before saving it to your own space.
+                               {t('community.adaptModal.description')}
                             </DialogDescription>
                             </DialogHeader>
                             <div className="grid gap-4 py-4">
-                                <Label htmlFor="content-editor">Content</Label>
+                                <Label htmlFor="content-editor">{t('community.adaptModal.contentLabel')}</Label>
                                 <Textarea 
                                     id="content-editor"
                                     value={adaptedContent}
@@ -199,7 +201,7 @@ export default function CommunityPage() {
                                 />
                             </div>
                             <DialogFooter>
-                                <Button type="submit" onClick={handleAdaptConfirm}>Adapt to My Space</Button>
+                                <Button type="submit" onClick={handleAdaptConfirm}>{t('community.buttons.adaptToMySpace')}</Button>
                             </DialogFooter>
                         </DialogContent>
                     </Dialog>

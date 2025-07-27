@@ -11,6 +11,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { getUserContent, listTextbooks, Content } from '@/services/firebase-service';
 import { Timestamp } from 'firebase/firestore';
 import Link from 'next/link';
+import { useTranslation } from '@/hooks/use-translation';
 
 type ContentWithId = Content & { id: string };
 type TextbookFile = { name: string; url: string };
@@ -20,6 +21,7 @@ export default function MySpacePage() {
   const [content, setContent] = useState<ContentWithId[]>([]);
   const [textbooks, setTextbooks] = useState<TextbookFile[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const { t } = useTranslation();
 
   useEffect(() => {
     async function loadData() {
@@ -55,11 +57,11 @@ export default function MySpacePage() {
 
   const getContentTypeLabel = (type: Content['type']) => {
     const labels: Record<Content['type'], string> = {
-        lessonPlan: 'Lesson Plan',
-        assessment: 'Assessment',
-        story: 'Story',
-        visualAid: 'Visual Aid',
-        classNotes: 'Class Notes',
+        lessonPlan: t('contentType.lessonPlan'),
+        assessment: t('contentType.assessment'),
+        story: t('contentType.story'),
+        visualAid: t('contentType.visualAid'),
+        classNotes: t('contentType.classNotes'),
     };
     return labels[type];
   }
@@ -68,10 +70,10 @@ export default function MySpacePage() {
      <Table>
       <TableHeader>
         <TableRow>
-          <TableHead>Type</TableHead>
-          <TableHead>Title</TableHead>
-          <TableHead>Date Created</TableHead>
-          <TableHead className="text-right">Actions</TableHead>
+          <TableHead>{t('type')}</TableHead>
+          <TableHead>{t('title')}</TableHead>
+          <TableHead>{t('dateCreated')}</TableHead>
+          <TableHead className="text-right">{t('actions')}</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -94,8 +96,8 @@ export default function MySpacePage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-3xl font-headline font-bold">My Space</h1>
-        <p className="text-muted-foreground">Your personal hub for all your content and resources.</p>
+        <h1 className="text-3xl font-headline font-bold">{t('mySpace.title')}</h1>
+        <p className="text-muted-foreground">{t('mySpace.subtitle')}</p>
       </div>
 
       {isLoading ? (
@@ -106,27 +108,27 @@ export default function MySpacePage() {
         <Card className="mt-8">
             <CardContent className="flex flex-col items-center justify-center p-12 text-center">
                 <User className="h-16 w-16 text-muted-foreground mb-4" />
-                <h3 className="text-xl font-semibold mb-2">Sign in to view your space</h3>
-                <p className="text-muted-foreground mb-6">Create an account to save and manage all your generated content in one place.</p>
+                <h3 className="text-xl font-semibold mb-2">{t('mySpace.guest.title')}</h3>
+                <p className="text-muted-foreground mb-6">{t('mySpace.guest.description')}</p>
                 <Button asChild>
-                    <Link href="/">Sign In</Link>
+                    <Link href="/">{t('signIn')}</Link>
                 </Button>
             </CardContent>
         </Card>
       ) : (
       <Tabs defaultValue="content" className="w-full">
         <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="content">My Content</TabsTrigger>
-          <TabsTrigger value="notes">My Notes</TabsTrigger>
-          <TabsTrigger value="schedule">My Schedule</TabsTrigger>
-          <TabsTrigger value="textbooks">My Textbooks</TabsTrigger>
+          <TabsTrigger value="content">{t('mySpace.tabs.myContent')}</TabsTrigger>
+          <TabsTrigger value="notes">{t('mySpace.tabs.myNotes')}</TabsTrigger>
+          <TabsTrigger value="schedule">{t('mySpace.tabs.mySchedule')}</TabsTrigger>
+          <TabsTrigger value="textbooks">{t('mySpace.tabs.myTextbooks')}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="content">
           <Card>
             <CardHeader>
-              <CardTitle>My Content</CardTitle>
-              <CardDescription>All your generated lesson plans, assessments, notes, and stories.</CardDescription>
+              <CardTitle>{t('mySpace.content.title')}</CardTitle>
+              <CardDescription>{t('mySpace.content.description')}</CardDescription>
             </CardHeader>
             <CardContent>
               {renderContentTable(content)}
@@ -137,8 +139,8 @@ export default function MySpacePage() {
          <TabsContent value="notes">
           <Card>
             <CardHeader>
-              <CardTitle>My Notes</CardTitle>
-              <CardDescription>All your generated class notes from audio recordings.</CardDescription>
+              <CardTitle>{t('mySpace.notes.title')}</CardTitle>
+              <CardDescription>{t('mySpace.notes.description')}</CardDescription>
             </CardHeader>
             <CardContent>
               {renderContentTable(content.filter(c => c.type === 'classNotes'))}
@@ -149,19 +151,19 @@ export default function MySpacePage() {
         <TabsContent value="schedule">
           <Card>
             <CardHeader>
-              <CardTitle>My Schedule</CardTitle>
-              <CardDescription>Your class schedule. (Placeholder)</CardDescription>
+              <CardTitle>{t('mySpace.schedule.title')}</CardTitle>
+              <CardDescription>{t('mySpace.schedule.description')}</CardDescription>
             </CardHeader>
             <CardContent className="text-center text-muted-foreground pt-6">
-              <p>Schedule feature coming soon.</p>
+              <p>{t('comingSoon')}</p>
             </CardContent>
           </Card>
         </TabsContent>
         <TabsContent value="textbooks">
           <Card>
             <CardHeader>
-              <CardTitle>My Textbooks</CardTitle>
-              <CardDescription>Your collection of textbook PDFs from Firebase Storage.</CardDescription>
+              <CardTitle>{t('mySpace.textbooks.title')}</CardTitle>
+              <CardDescription>{t('mySpace.textbooks.description')}</CardDescription>
             </CardHeader>
             <CardContent className="pt-6">
                 {textbooks.length > 0 ? (
@@ -179,7 +181,7 @@ export default function MySpacePage() {
                     </div>
                 ) : (
                     <div className="text-center text-muted-foreground">
-                        <p>No textbooks found. Please follow the setup guide to upload your textbooks to Firebase Storage.</p>
+                        <p>{t('mySpace.textbooks.empty')}</p>
                     </div>
                 )}
             </CardContent>

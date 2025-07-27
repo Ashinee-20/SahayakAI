@@ -11,7 +11,6 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
-import { saveContent } from '@/services/firebase-service';
 
 // Define the schema for the input, which is just the audio data URI
 const GenerateClassNotesInputSchema = z.object({
@@ -20,7 +19,6 @@ const GenerateClassNotesInputSchema = z.object({
     .describe(
       "Audio recording of the class as a data URI that must include a MIME type and use Base64 encoding. Expected format: 'data:<mimetype>;base64,<encoded_data>'."
     ),
-  userId: z.string().describe('The user ID for saving the content.'),
 });
 export type GenerateClassNotesInput = z.infer<typeof GenerateClassNotesInputSchema>;
 
@@ -63,7 +61,7 @@ const generateClassNotesFlow = ai.defineFlow(
     inputSchema: GenerateClassNotesInputSchema,
     outputSchema: NotesSchema,
   },
-  async ({audioDataUri, userId}) => {
+  async ({audioDataUri}) => {
     // The prompt instructing the model how to behave and what to do
     const prompt = `You are a world-class academic note-taking assistant. Your task is to analyze the provided classroom lecture audio and generate structured, comprehensive notes. Please focus exclusively on the primary speaker, who is the teacher or lecturer. Disregard any background noise, student questions, or side conversations. The output must be in a clear, organized format. Summarize the key concepts and present them with a main title for the lecture, followed by major topics as headings, and detailed bullet points under each heading.`;
 
@@ -85,9 +83,6 @@ const generateClassNotesFlow = ai.defineFlow(
     if (!output) {
       throw new Error("The API returned an empty response. The audio might have been unclear.");
     }
-    
-    // Save to firestore
-    await saveContent(userId, 'classNotes', output.title, output);
 
     return output;
   }
