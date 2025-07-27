@@ -1,10 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { BookOpenCheck, ChevronRight, Loader2, User } from 'lucide-react';
-import { getAuth, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
+import { getAuth, GoogleAuthProvider, signInWithRedirect, getRedirectResult } from 'firebase/auth';
 import { app } from '@/lib/firebase';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/use-auth';
@@ -15,9 +15,28 @@ export default function RootPage() {
   const auth = getAuth(app);
   const { user } = useAuth();
 
+  useEffect(() => {
+    // Check for redirect result when the component mounts
+    const checkRedirectResult = async () => {
+      setIsLoading(true);
+      try {
+        await getRedirectResult(auth);
+        // AuthProvider will handle redirecting to '/home' if successful
+      } catch (error) {
+        console.error('Error getting redirect result:', error);
+      } finally {
+        // Only stop loading if there isn't a user, otherwise AuthProvider is handling it
+        if (!auth.currentUser) {
+            setIsLoading(false);
+        }
+      }
+    };
+    checkRedirectResult();
+  }, [auth]);
+
   if (user) {
     router.push('/home');
-    return null;
+    return null; // Render nothing while redirecting
   }
 
   const handleGoogleSignIn = async () => {
@@ -27,13 +46,8 @@ export default function RootPage() {
     provider.addScope('https://www.googleapis.com/auth/forms.body');
     provider.addScope('https://www.googleapis.com/auth/drive.readonly');
     
-    try {
-      await signInWithPopup(auth, provider);
-      // AuthProvider will handle redirect on successful sign-in
-    } catch (error) {
-      console.error('Google Sign-In Error:', error);
-      setIsLoading(false);
-    }
+    // We use signInWithRedirect which is more robust against popup blockers
+    await signInWithRedirect(auth, provider);
   };
 
   return (
