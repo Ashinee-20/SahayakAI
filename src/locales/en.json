@@ -193,7 +193,12 @@
     },
     "results": {
       "title": "Generated Lesson Plan",
-      "description": "Review the generated plan below."
+      "description": "Review the generated plan below.",
+      "class": "Class",
+      "objective": "Objective",
+      "activities": "Activities",
+      "assessment": "Assessment",
+      "resources": "Resources"
     }
   },
   "createStory": {

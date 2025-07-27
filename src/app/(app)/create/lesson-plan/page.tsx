@@ -15,6 +15,7 @@ import { Loader2, Sparkles, Download, Share2 } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
 import { useTranslation } from '@/hooks/use-translation';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 
 const formSchema = z.object({
   grade: z.string().min(1, 'Grade is required'),
@@ -24,9 +25,64 @@ const formSchema = z.object({
   topicsOrChapters: z.string().min(3, 'Topics or chapters are required'),
 });
 
+interface LessonPlan {
+  plan_title: string;
+  classes: {
+    class_number: number;
+    topic: string;
+    objective: string;
+    activities: string[];
+    assessment: string;
+    resources: string[];
+  }[];
+}
+
+const LessonPlanDisplay = ({ plan }: { plan: LessonPlan }) => {
+  const { t } = useTranslation();
+  return (
+    <div className="space-y-4">
+      <h2 className="text-2xl font-headline font-bold text-center">{plan.plan_title}</h2>
+      <Accordion type="single" collapsible className="w-full" defaultValue="item-0">
+        {plan.classes.map((classInfo, index) => (
+          <AccordionItem value={`item-${index}`} key={index}>
+            <AccordionTrigger className="text-lg font-semibold">
+              {t('createLessonPlan.results.class')} {classInfo.class_number}: {classInfo.topic}
+            </AccordionTrigger>
+            <AccordionContent>
+              <div className="space-y-4 pl-4 border-l-2 border-primary ml-2">
+                <div>
+                  <h4 className="font-semibold text-base">{t('createLessonPlan.results.objective')}</h4>
+                  <p className="text-muted-foreground">{classInfo.objective}</p>
+                </div>
+                <div>
+                  <h4 className="font-semibold text-base">{t('createLessonPlan.results.activities')}</h4>
+                  <ul className="list-disc pl-5 text-muted-foreground space-y-1">
+                    {classInfo.activities.map((activity, i) => <li key={i}>{activity}</li>)}
+                  </ul>
+                </div>
+                <div>
+                  <h4 className="font-semibold text-base">{t('createLessonPlan.results.assessment')}</h4>
+                  <p className="text-muted-foreground">{classInfo.assessment}</p>
+                </div>
+                 <div>
+                  <h4 className="font-semibold text-base">{t('createLessonPlan.results.resources')}</h4>
+                  <ul className="list-disc pl-5 text-muted-foreground space-y-1">
+                    {classInfo.resources.map((resource, i) => <li key={i}>{resource}</li>)}
+                  </ul>
+                </div>
+              </div>
+            </AccordionContent>
+          </AccordionItem>
+        ))}
+      </Accordion>
+    </div>
+  );
+};
+
+
 export default function LessonPlanPage() {
   const [isLoading, setIsLoading] = useState(false);
-  const [lessonPlan, setLessonPlan] = useState<string | null>(null);
+  const [lessonPlan, setLessonPlan] = useState<LessonPlan | null>(null);
   const { user } = useAuth();
   const { toast } = useToast();
   const { t } = useTranslation();
@@ -60,7 +116,7 @@ export default function LessonPlanPage() {
     try {
       const result = await generateLessonPlan(input);
       const parsedPlan = JSON.parse(result.lessonPlan);
-      setLessonPlan(JSON.stringify(parsedPlan, null, 2));
+      setLessonPlan(parsedPlan);
       toast({ title: t('toast.success.lessonPlanGeneratedTitle'), description: t('toast.success.lessonPlanGeneratedDescription')});
     } catch (error) {
       console.error('Error generating lesson plan:', error);
@@ -210,9 +266,7 @@ export default function LessonPlanPage() {
             </div>
           </CardHeader>
           <CardContent>
-            <pre className="bg-muted p-4 rounded-lg overflow-x-auto text-sm">
-              <code>{lessonPlan}</code>
-            </pre>
+             <LessonPlanDisplay plan={lessonPlan} />
           </CardContent>
         </Card>
       )}

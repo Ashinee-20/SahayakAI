@@ -193,7 +193,12 @@
     },
     "results": {
       "title": "उत्पन्न पाठ योजना",
-      "description": "नीचे दी गई उत्पन्न योजना की समीक्षा करें।"
+      "description": "नीचे दी गई उत्पन्न योजना की समीक्षा करें।",
+      "class": "कक्षा",
+      "objective": "उद्देश्य",
+      "activities": "गतिविधियाँ",
+      "assessment": "मूल्यांकन",
+      "resources": "संसाधन"
     }
   },
   "createStory": {
