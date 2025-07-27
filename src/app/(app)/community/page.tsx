@@ -1,12 +1,18 @@
+'use client';
+
+import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { ThumbsUp, MessageSquare, GitBranchPlus } from 'lucide-react';
+import { ThumbsUp, MessageSquare, Upload, ArrowUpDown } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
 
-const communityPosts = [
+const initialCommunityPosts = [
   {
     id: 1,
     author: 'Anjali Sharma',
@@ -14,10 +20,14 @@ const communityPosts = [
     avatar: 'https://placehold.co/40x40.png',
     initials: 'AS',
     type: 'Lesson Plan',
+    grade: '7',
+    subject: 'Maths',
     title: 'Interactive Geometry Lesson for Grade 7',
     description: 'A fun, hands-on lesson plan to teach basic geometric shapes and their properties.',
+    content: '{\n  "title": "Interactive Geometry Lesson",\n  "grade": "7",\n  "subject": "Maths",\n  "objectives": ["Identify shapes", "Understand properties"],\n  "activities": ["Shape hunt", "Building with blocks"]\n}',
     likes: 15,
     comments: 4,
+    createdAt: new Date('2023-10-26T10:00:00Z'),
   },
   {
     id: 2,
@@ -26,10 +36,14 @@ const communityPosts = [
     avatar: 'https://placehold.co/40x40.png',
     initials: 'RK',
     type: 'Assessment',
+    grade: '5',
+    subject: 'Science',
     title: 'Grade 5 Science - Human Body Systems Quiz',
     description: 'A comprehensive quiz covering the digestive, circulatory, and respiratory systems.',
+    content: '{\n  "title": "Human Body Systems Quiz",\n  "questions": [\n    {"q": "Which organ pumps blood?", "a": "Heart"},\n    {"q": "What is the function of the lungs?", "a": "Breathing"}\n  ]\n}',
     likes: 22,
     comments: 8,
+    createdAt: new Date('2023-10-28T14:30:00Z'),
   },
    {
     id: 3,
@@ -38,14 +52,37 @@ const communityPosts = [
     avatar: 'https://placehold.co/40x40.png',
     initials: 'PS',
     type: 'Story',
+    grade: '3',
+    subject: 'Science',
     title: 'The Tale of Two Protons',
     description: 'An engaging story to explain the concept of atoms and molecules to young learners.',
+    content: 'Once upon a time, in a tiny world called Atomsville, lived two best friends, Percy the Proton and Nelly the Neutron. They lived in a cozy house called the Nucleus...',
     likes: 30,
     comments: 12,
+    createdAt: new Date('2023-10-20T09:00:00Z'),
   },
 ];
 
+type Post = typeof initialCommunityPosts[0];
+
 export default function CommunityPage() {
+  const [posts, setPosts] = useState(initialCommunityPosts);
+  const [selectedPost, setSelectedPost] = useState<Post | null>(null);
+  const [adaptedContent, setAdaptedContent] = useState('');
+
+  const handleAdaptClick = (post: Post) => {
+    setSelectedPost(post);
+    setAdaptedContent(post.content);
+  }
+
+  const handleAdaptConfirm = () => {
+    if (!selectedPost) return;
+    // In a real app, you would save `adaptedContent` to the user's "My Space" in Firestore.
+    console.log(`Adapting content for "${selectedPost.title}"`);
+    console.log(adaptedContent);
+    alert('Content adapted and saved to your "My Space"! (Simulated)');
+  };
+
   return (
     <div className="space-y-8">
       <div>
@@ -55,42 +92,61 @@ export default function CommunityPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Community Feed</CardTitle>
-          <CardDescription>Find resources shared by other teachers.</CardDescription>
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div>
+              <CardTitle>Community Feed</CardTitle>
+              <CardDescription>Find resources shared by other teachers.</CardDescription>
+            </div>
+             <Button>
+                <Upload className="mr-2 h-4 w-4" /> Share Your Content
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           <div className="flex flex-col md:flex-row gap-4 mb-6">
             <Input placeholder="Search content..." className="flex-1" />
-            <div className="flex gap-4">
+            <div className="flex flex-wrap gap-4">
               <Select>
-                <SelectTrigger className="w-[180px]">
+                <SelectTrigger className="w-full md:w-[160px]">
                   <SelectValue placeholder="Filter by Grade" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="all">All Grades</SelectItem>
+                  <SelectItem value="3">Grade 3</SelectItem>
                   <SelectItem value="5">Grade 5</SelectItem>
                   <SelectItem value="7">Grade 7</SelectItem>
                 </SelectContent>
               </Select>
                <Select>
-                <SelectTrigger className="w-[180px]">
+                <SelectTrigger className="w-full md:w-[160px]">
                   <SelectValue placeholder="Filter by Subject" />
                 </SelectTrigger>
                 <SelectContent>
+                   <SelectItem value="all">All Subjects</SelectItem>
                    <SelectItem value="Science">Science</SelectItem>
-                  <SelectItem value="Maths">Maths</SelectItem>
+                   <SelectItem value="Maths">Maths</SelectItem>
+                </SelectContent>
+              </Select>
+               <Select>
+                <SelectTrigger className="w-full md:w-[160px]">
+                  <SelectValue placeholder="Sort by" />
+                </SelectTrigger>
+                <SelectContent>
+                   <SelectItem value="rating">Highest Rating</SelectItem>
+                   <SelectItem value="recent">Most Recent</SelectItem>
                 </SelectContent>
               </Select>
             </div>
           </div>
 
           <div className="grid gap-6">
-            {communityPosts.map(post => (
+            {posts.map(post => (
               <Card key={post.id} className="hover:shadow-md transition-shadow">
                 <CardHeader>
                   <div className="flex items-start justify-between">
                     <div>
                       <CardTitle className="font-headline text-xl">{post.title}</CardTitle>
-                      <div className="flex items-center gap-2 mt-2">
+                      <div className="flex items-center gap-2 mt-2 flex-wrap">
                         <Avatar className="h-6 w-6">
                           <AvatarImage src={post.avatar} />
                           <AvatarFallback>{post.initials}</AvatarFallback>
@@ -99,7 +155,10 @@ export default function CommunityPage() {
                         <span className="text-sm text-muted-foreground">- {post.school}</span>
                       </div>
                     </div>
-                    <Badge>{post.type}</Badge>
+                    <div className="flex flex-col items-end gap-2">
+                        <Badge>{post.type}</Badge>
+                         <p className="text-xs text-muted-foreground">{post.createdAt.toLocaleDateString()}</p>
+                    </div>
                   </div>
                 </CardHeader>
                 <CardContent>
@@ -114,9 +173,36 @@ export default function CommunityPage() {
                             <MessageSquare className="h-4 w-4" /> {post.comments}
                         </Button>
                     </div>
-                    <Button className="bg-gradient-to-r from-primary to-accent text-primary-foreground hover:scale-105 transition-transform duration-200">
-                        <GitBranchPlus className="mr-2 h-4 w-4" /> Adapt
-                    </Button>
+                    <Dialog>
+                        <DialogTrigger asChild>
+                            <Button 
+                                className="bg-gradient-to-r from-primary to-accent text-primary-foreground hover:scale-105 transition-transform duration-200"
+                                onClick={() => handleAdaptClick(post)}
+                            >
+                                Preview & Adapt
+                            </Button>
+                        </DialogTrigger>
+                        <DialogContent className="sm:max-w-[600px]">
+                            <DialogHeader>
+                            <DialogTitle>Preview & Adapt: {selectedPost?.title}</DialogTitle>
+                            <DialogDescription>
+                                Review the content below. You can edit it here before saving it to your own space.
+                            </DialogDescription>
+                            </DialogHeader>
+                            <div className="grid gap-4 py-4">
+                                <Label htmlFor="content-editor">Content</Label>
+                                <Textarea 
+                                    id="content-editor"
+                                    value={adaptedContent}
+                                    onChange={(e) => setAdaptedContent(e.target.value)}
+                                    className="min-h-[300px] font-mono text-xs"
+                                />
+                            </div>
+                            <DialogFooter>
+                                <Button type="submit" onClick={handleAdaptConfirm}>Adapt to My Space</Button>
+                            </DialogFooter>
+                        </DialogContent>
+                    </Dialog>
                 </CardFooter>
               </Card>
             ))}
