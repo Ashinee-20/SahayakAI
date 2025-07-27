@@ -29,6 +29,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [isGuest, setIsGuest] = useState(false);
+  const [initialLoad, setInitialLoad] = useState(true);
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -38,7 +39,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const guestParam = searchParams.get('guest');
     if (guestParam === 'true') {
       setIsGuest(true);
-      setLoading(false); // Set loading to false once guest state is confirmed
+      setLoading(false);
+      setInitialLoad(false);
       if (pathname === '/') {
         router.push('/home');
       }
@@ -48,14 +50,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
       setUser(firebaseUser);
-      setLoading(false); // Ensure loading is set to false after auth state is determined
+      setLoading(false);
+      setInitialLoad(false);
+      
+      // If user just signed in and we're on the root page, redirect to home
+      if (firebaseUser && pathname === '/') {
+        router.push('/home');
+      }
     });
 
     return () => unsubscribe();
   }, [auth]);
 
   useEffect(() => {
-    if (loading) return; // Wait until loading is complete
+    if (loading || initialLoad) return; // Wait until loading is complete
 
     const isAuthPage = pathname === '/';
 
@@ -65,9 +73,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } else if (!user && !isGuest && !isAuthPage) {
       router.push('/');
     }
-  }, [user, loading, isGuest, pathname, router]);
+  }, [user, loading, isGuest, pathname, router, initialLoad]);
 
-  if (loading) {
+  if (loading || initialLoad) {
     return (
       <div className="flex items-center justify-center h-screen w-full">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
