@@ -29,7 +29,7 @@ import { Separator } from '@/components/ui/separator';
 
 const navItems = [
   { href: '/home', labelKey: 'home', icon: Home },
-  { href: '/create', labelKey: 'create', icon: LayoutGrid },
+  { href: '/create', labelKey: 'create.title', icon: LayoutGrid },
   { href: '/my-space', labelKey: 'mySpace', icon: User },
   { href: '/community', labelKey: 'community', icon: Users },
   { href: '/settings', labelKey: 'settings', icon: Settings },
