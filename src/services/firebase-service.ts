@@ -1,6 +1,6 @@
 import { db, storage } from '@/lib/firebase';
 import { collection, addDoc, getDocs, query, where, Timestamp } from 'firebase/firestore';
-import { ref, uploadString, getDownloadURL, listAll } from 'firebase/storage';
+import { ref, uploadString, getDownloadURL, listAll, StorageReference } from 'firebase/storage';
 import { z } from 'zod';
 
 export const ContentSchema = z.object({
@@ -64,17 +64,31 @@ export async function uploadImageToStorage(imageDataUri: string, userId: string,
     return downloadUrl;
 }
 
+// Recursive function to get all files from a directory and its subdirectories
+async function listAllFiles(dirRef: StorageReference): Promise<{ name: string; url: string }[]> {
+  const res = await listAll(dirRef);
+  let files: { name: string; url: string }[] = [];
+
+  // Get file URLs from the current directory
+  const filePromises = res.items.map(async (itemRef) => {
+    const url = await getDownloadURL(itemRef);
+    return {
+      name: itemRef.name,
+      url: url,
+    };
+  });
+  files = files.concat(await Promise.all(filePromises));
+
+  // Recursively get files from subdirectories
+  for (const folderRef of res.prefixes) {
+    const subFiles = await listAllFiles(folderRef);
+    files = files.concat(subFiles);
+  }
+
+  return files;
+}
+
 export async function listTextbooks(userId: string): Promise<{name: string, url: string}[]> {
     const textbooksRef = ref(storage, `textbooks/`);
-    const res = await listAll(textbooksRef);
-    
-    const textbookPromises = res.items.map(async (itemRef) => {
-        const url = await getDownloadURL(itemRef);
-        return {
-            name: itemRef.name,
-            url: url,
-        };
-    });
-
-    return Promise.all(textbookPromises);
+    return await listAllFiles(textbooksRef);
 }
