@@ -217,7 +217,7 @@ export default function MySpacePage() {
                     <Loader2 className="h-8 w-8 animate-spin text-primary" />
                   </div>
                 ) : (
-                {textbooks.length > 0 ? (
+                textbooks.length > 0 ? (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                         {textbooks.map(book => (
                             <Link key={book.name} href={book.url} target="_blank" rel="noopener noreferrer">
@@ -234,7 +234,7 @@ export default function MySpacePage() {
                     <div className="text-center text-muted-foreground">
                         <p>{t('mySpace.textbooks.empty')}</p>
                     </div>
-                )}
+                )
                 )}
             </CardContent>
           </Card>
