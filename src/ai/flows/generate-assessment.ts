@@ -5,7 +5,7 @@
  */
 
 import {ai} from '@/ai/genkit';
-import { GoogleFormsService, FormQuestion } from '@/services/google-forms';
+import { FormQuestion } from '@/services/google-forms';
 import { 
   GenerateAssessmentInputSchema,
   GenerateAssessmentOutputSchema,
@@ -75,44 +75,87 @@ const generateAssessmentFlow = ai.defineFlow(
     inputSchema: GenerateAssessmentInputSchema,
     outputSchema: GenerateAssessmentOutputSchema,
   },
-  async input => {
-    // Step 1: Generate questions using the AI model
-    const { output } = await assessmentPrompt(input);
-    if (!output?.questions) {
-      throw new Error("Failed to generate assessment questions.");
-    }
-    const generatedQuestions: FormQuestion[] = output.questions;
-    
-    // Step 2: Use the Google Forms Service
-    const formsService = new GoogleFormsService(input.accessToken);
-    
-    const formTitle = `Assessment: ${input.subject} - ${input.topics_or_chapters}`;
-    const formDescription = `An assessment for Grade ${input.grade} on the topic of ${input.topics_or_chapters}.`;
+  async (input) => {
+    try {
+      // Step 1: Generate questions using the AI model
+      const { output } = await assessmentPrompt(input);
+      if (!output?.questions) {
+        throw new Error("Failed to generate assessment questions.");
+      }
+      const generatedQuestions: FormQuestion[] = output.questions;
+      
+      const formTitle = `Assessment: ${input.subject} - ${input.topics_or_chapters}`;
+      const formDescription = `An assessment for Grade ${input.grade} on the topic of ${input.topics_or_chapters}.`;
 
-    // Step 3: Create the Google Form
-    const formId = await formsService.createForm(formTitle, formDescription);
+      // Step 2: Create the Google Form
+      const createFormResponse = await fetch('https://forms.googleapis.com/v1/forms', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${input.accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ info: { title: formTitle, documentTitle: formTitle } }),
+      });
 
-    // Step 4: Add the generated questions to the form
-    await formsService.addQuestions(formId, generatedQuestions);
-    
-    // Step 5: Get the form details (including the public URL)
-    const form = await formsService.getForm(formId);
+      if (!createFormResponse.ok) {
+        const errorBody = await createFormResponse.text();
+        console.error('Google Forms API error (createForm):', createFormResponse.status, errorBody);
+        throw new Error(`Google Forms API error creating form: ${createFormResponse.statusText}. Ensure the Forms API is enabled.`);
+      }
+      const form = await createFormResponse.json();
+      const formId = form.formId;
 
-    // Step 6: Save to Firestore
-    await saveContent(
-        input.userId,
-        'assessment',
-        formTitle,
-        {
-            formUrl: form.responderUri,
-            questions: generatedQuestions,
+      // Step 3: Add the generated questions to the form
+      if (generatedQuestions.length > 0) {
+        const requests = generatedQuestions.map((question, index) => {
+            const questionRequest: any = { createItem: { item: { title: question.title, questionItem: { question: { required: question.required ?? false } } }, location: { index: index } } };
+            if (question.type === 'RADIO' || question.type === 'CHECKBOX') {
+                questionRequest.createItem.item.questionItem.question.choiceQuestion = { type: question.type, options: (question.options || []).map((option: string) => ({ value: option })), shuffle: false };
+            } else {
+                questionRequest.createItem.item.questionItem.question.textQuestion = { paragraph: question.type === 'PARAGRAPH' };
+            }
+            return questionRequest;
+        });
+
+        const batchUpdateResponse = await fetch(`https://forms.googleapis.com/v1/forms/${formId}:batchUpdate`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${input.accessToken}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ requests, includeFormInResponse: false }),
+        });
+
+        if (!batchUpdateResponse.ok) {
+            const errorBody = await batchUpdateResponse.text();
+            console.error('Google Forms API error (addQuestions):', batchUpdateResponse.status, errorBody);
+            throw new Error(`Google Forms API error adding questions: ${batchUpdateResponse.statusText}.`);
         }
-    );
+      }
+      
+      // Step 4: Get the form details (including the public URL)
+      const getFormResponse = await fetch(`https://forms.googleapis.com/v1/forms/${formId}`, {
+        headers: { 'Authorization': `Bearer ${input.accessToken}` },
+      });
 
-    // Step 7: Return the URL and the raw questions
-    return {
-      formUrl: form.responderUri,
-      assessment: JSON.stringify(generatedQuestions, null, 2),
-    };
+      if (!getFormResponse.ok) {
+        throw new Error(`Google Forms API error getting form details: ${getFormResponse.statusText}.`);
+      }
+      const finalForm = await getFormResponse.json();
+
+      // Step 5: Save to Firestore
+      await saveContent(
+          input.userId,
+          'assessment',
+          formTitle,
+          { formUrl: finalForm.responderUri, questions: generatedQuestions }
+      );
+
+      // Step 6: Return the URL and the raw questions
+      return {
+        formUrl: finalForm.responderUri,
+        assessment: JSON.stringify(generatedQuestions, null, 2),
+      };
+    } catch (error: any) {
+        console.error("Error in generateAssessmentFlow:", error);
+        throw new Error(error.message || "An unexpected error occurred during assessment generation.");
+    }
   }
 );
