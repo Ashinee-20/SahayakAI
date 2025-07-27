@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -16,7 +16,7 @@ import { Loader2, Sparkles, Download, Share2, ExternalLink } from 'lucide-react'
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from '@/hooks/use-auth';
 import Link from 'next/link';
-import { getAuth, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
+import { getAuth, GoogleAuthProvider, signInWithRedirect, getRedirectResult, onAuthStateChanged } from 'firebase/auth';
 import { app } from '@/lib/firebase';
 
 const formSchema = z.object({
@@ -38,6 +38,8 @@ const formSchema = z.object({
   desc_type: z.enum(['Short Answer', 'Long Answer', 'Both']).optional(),
 });
 
+type FormData = z.infer<typeof formSchema>;
+
 export default function AssessmentPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [assessmentResult, setAssessmentResult] = useState<string | null>(null);
@@ -46,7 +48,7 @@ export default function AssessmentPage() {
   const { user } = useAuth();
   const auth = getAuth(app);
 
-  const form = useForm<z.infer<typeof formSchema>>({
+  const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       grade: '',
@@ -59,30 +61,46 @@ export default function AssessmentPage() {
 
   const assessmentType = form.watch('assessment_type');
 
-  async function onSubmit(values: z.infer<typeof formSchema>) {
+  // Effect to handle the redirect result from Google
+  useEffect(() => {
+    const handleRedirect = async () => {
+      try {
+        setIsLoading(true);
+        const result = await getRedirectResult(auth);
+        if (result) {
+          const credential = GoogleAuthProvider.credentialFromResult(result);
+          if (credential?.accessToken) {
+            // Retrieve pending form data from sessionStorage
+            const pendingData = sessionStorage.getItem('pendingAssessmentData');
+            if (pendingData) {
+              sessionStorage.removeItem('pendingAssessmentData'); // Clean up
+              const values: FormData = JSON.parse(pendingData);
+              // Now run the generation logic with the token
+              await runAssessmentGeneration(values, credential.accessToken);
+            }
+          } else {
+             toast({ variant: "destructive", title: "Authentication Error", description: "Could not get credentials from Google. Please try again." });
+          }
+        }
+      } catch (error) {
+        console.error('Error getting redirect result:', error);
+        toast({ variant: "destructive", title: "Authentication Failed", description: "Could not complete the sign-in process." });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    handleRedirect();
+  }, [auth]);
+
+
+  async function runAssessmentGeneration(values: FormData, accessToken: string) {
+    if (!user) return; // Should not happen if we have an access token
+
     setIsLoading(true);
     setAssessmentResult(null);
     setFormUrl(null);
-
-    if (!user) {
-        toast({ variant: "destructive", title: "Authentication Error", description: "You must be signed in to generate an assessment." });
-        setIsLoading(false);
-        return;
-    }
-
+    
     try {
-      const provider = new GoogleAuthProvider();
-      provider.addScope('https://www.googleapis.com/auth/forms.body');
-      provider.addScope('https://www.googleapis.com/auth/drive.readonly');
-      
-      const result = await signInWithPopup(auth, provider);
-      const credential = GoogleAuthProvider.credentialFromResult(result);
-      
-      if (!credential?.accessToken) {
-        throw new Error("Could not retrieve access token from Google.");
-      }
-      const accessToken = credential.accessToken;
-      
       const input: GenerateAssessmentInput = {
         grade: values.grade,
         subject: values.subject,
@@ -135,6 +153,23 @@ export default function AssessmentPage() {
     } finally {
       setIsLoading(false);
     }
+  }
+
+
+  async function onSubmit(values: FormData) {
+    if (!user) {
+        toast({ variant: "destructive", title: "Authentication Error", description: "You must be signed in to generate an assessment." });
+        return;
+    }
+    
+    // Save form data to sessionStorage to retrieve after redirect
+    sessionStorage.setItem('pendingAssessmentData', JSON.stringify(values));
+
+    // Start the redirect flow to get permissions
+    const provider = new GoogleAuthProvider();
+    provider.addScope('https://www.googleapis.com/auth/forms.body');
+    provider.addScope('https://www.googleapis.com/auth/drive.readonly');
+    await signInWithRedirect(auth, provider);
   }
 
   return (
@@ -258,7 +293,7 @@ export default function AssessmentPage() {
                 )}
               />
               <Button type="submit" disabled={isLoading} className="bg-gradient-to-r from-primary to-accent text-primary-foreground hover:scale-105 transition-transform duration-200">
-                {isLoading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Generating...</> : <><Sparkles className="mr-2 h-4 w-4" />Generate Assessment</>}
+                {isLoading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Processing...</> : <><Sparkles className="mr-2 h-4 w-4" />Generate Assessment</>}
               </Button>
             </form>
           </Form>
