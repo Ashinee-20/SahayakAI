@@ -1,3 +1,4 @@
+
 'use client';
 
 import {
@@ -37,36 +38,37 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const guestParam = searchParams.get('guest');
     if (guestParam === 'true') {
       setIsGuest(true);
+      setLoading(false); // Set loading to false once guest state is confirmed
+      if (pathname === '/') {
+        router.push('/home');
+      }
     }
-  }, [searchParams]);
+  }, [searchParams, pathname, router]);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
       setUser(firebaseUser);
-      setLoading(false);
+      setLoading(false); // Ensure loading is set to false after auth state is determined
     });
 
     return () => unsubscribe();
   }, [auth]);
 
   useEffect(() => {
-    if (loading) return; // Don't run logic until auth state is confirmed
+    if (loading) return; // Wait until loading is complete
 
     const isAuthPage = pathname === '/';
 
-    // If there's a user or it's a guest session, and they are on the login page, redirect to home.
+    // Redirect logic
     if ((user || isGuest) && isAuthPage) {
       router.push('/home');
-    }
-    // If there's no user and it's not a guest session, and they are on a protected page, redirect to login.
-    else if (!user && !isGuest && !isAuthPage) {
+    } else if (!user && !isGuest && !isAuthPage) {
       router.push('/');
     }
   }, [user, loading, isGuest, pathname, router]);
-  
-  // This loading state is crucial. It prevents rendering of the app until we know if a user is logged in or not.
+
   if (loading) {
-     return (
+    return (
       <div className="flex items-center justify-center h-screen w-full">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
       </div>
@@ -81,9 +83,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 };
 
 export const useAuth = () => {
-    const context = useContext(AuthContext);
-    if (context === undefined) {
-        throw new Error('useAuth must be used within an AuthProvider');
-    }
-    return context;
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
 };
