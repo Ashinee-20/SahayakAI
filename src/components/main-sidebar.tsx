@@ -1,3 +1,4 @@
+
 'use client';
 
 import Link from 'next/link';
@@ -17,8 +18,8 @@ import { useTranslation } from '@/hooks/use-translation';
 const navItems = [
   { href: '/home', labelKey: 'home', icon: Home },
   { href: '/create', labelKey: 'create.title', icon: LayoutGrid },
-  { href: '/my-space', labelKey: 'mySpace', icon: User },
-  { href: '/community', labelKey: 'community', icon: Users },
+  { href: '/my-space', labelKey: 'mySpace.title', icon: User },
+  { href: '/community', labelKey: 'community.title', icon: Users },
 ];
 
 export default function MainSidebar() {
@@ -59,7 +60,7 @@ export default function MainSidebar() {
               )}
           >
             <Settings className="h-4 w-4" />
-            {t('settings')}
+            {t('settings.title')}
           </Link>
       </div>
     </aside>
