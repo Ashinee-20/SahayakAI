@@ -50,21 +50,24 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, [auth]);
 
   useEffect(() => {
-    if (!loading) {
-      const isAuthPage = pathname === '/';
-      if (!user && !isGuest && !isAuthPage) {
-        router.push('/');
-      } else if (user && isAuthPage) {
-        router.push('/home');
-      } else if(isGuest && isAuthPage) {
-        router.push('/home');
-      }
+    if (loading) return; // Don't run logic until auth state is confirmed
+
+    const isAuthPage = pathname === '/';
+
+    // If there's a user or it's a guest session, and they are on the login page, redirect to home.
+    if ((user || isGuest) && isAuthPage) {
+      router.push('/home');
+    }
+    // If there's no user and it's not a guest session, and they are on a protected page, redirect to login.
+    else if (!user && !isGuest && !isAuthPage) {
+      router.push('/');
     }
   }, [user, loading, isGuest, pathname, router]);
   
+  // This loading state is crucial. It prevents rendering of the app until we know if a user is logged in or not.
   if (loading) {
      return (
-      <div className="flex items-center justify-center h-screen">
+      <div className="flex items-center justify-center h-screen w-full">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
       </div>
     );
