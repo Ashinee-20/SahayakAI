@@ -1,3 +1,4 @@
+
 'use client';
 
 import Link from 'next/link';
@@ -5,7 +6,10 @@ import { usePathname } from 'next/navigation';
 import {
   Sheet,
   SheetContent,
+  SheetHeader,
+  SheetTitle,
   SheetTrigger,
+  SheetDescription
 } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import {
@@ -21,6 +25,7 @@ import UserNav from './user-nav';
 import { cn } from '@/lib/utils';
 import { useTranslation } from '@/hooks/use-translation';
 import LanguageToggle from './language-toggle';
+import { Separator } from '@/components/ui/separator';
 
 const navItems = [
   { href: '/home', labelKey: 'home', icon: Home },
@@ -47,14 +52,18 @@ export default function Header() {
           </Button>
         </SheetTrigger>
         <SheetContent side="left">
-          <nav className="grid gap-6 text-lg font-medium">
-            <Link
-              href="/home"
-              className="flex items-center gap-2 text-lg font-semibold"
-            >
-              <BookOpenCheck className="h-6 w-6 text-primary" />
-              <span className="font-headline text-xl">Sahayak</span>
-            </Link>
+            <SheetHeader>
+                <SheetTitle className="sr-only">Main Menu</SheetTitle>
+                 <Link
+                    href="/home"
+                    className="flex items-center gap-2 text-lg font-semibold"
+                    >
+                    <BookOpenCheck className="h-6 w-6 text-primary" />
+                    <span className="font-headline text-xl">Sahayak</span>
+                </Link>
+            </SheetHeader>
+            <Separator className="my-4" />
+          <nav className="grid gap-4 text-lg font-medium">
             {navItems.map(({ href, labelKey, icon: Icon }) => (
               <Link
                 key={labelKey}
