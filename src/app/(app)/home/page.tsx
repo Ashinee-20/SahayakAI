@@ -1,34 +1,13 @@
 'use client';
 
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription
-} from '@/components/ui/card';
 import { useAuth } from '@/hooks/use-auth';
-import { BookOpen, FileText, Sparkles, Clock, Calendar } from 'lucide-react';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Badge } from "@/components/ui/badge"
 import { useTranslation } from '@/hooks/use-translation';
-
-const stats = [
-  { titleKey: 'lessonPlansCreated', value: '12', icon: BookOpen },
-  { titleKey: 'assessmentsGenerated', value: '8', icon: FileText },
-  { titleKey: 'storiesCrafted', value: '5', icon: Sparkles },
-];
-
-const recentItems = [
-    { type: 'Lesson Plan', title: 'Algebra Basics for Grade 8', date: '2 days ago', variant: 'default' },
-    { type: 'Assessment', title: 'Quiz on Photosynthesis', date: '3 days ago', variant: 'secondary' },
-    { type: 'Story', title: 'The Water Cycle Adventure', date: '5 days ago', variant: 'outline' },
-    { type: 'Class Notes', title: 'Lecture on Indian History', date: '1 week ago', variant: 'destructive' },
-    { type: 'Lesson Plan', title: 'Introduction to Poetry', date: '1 week ago', variant: 'default' },
-]
+import { Stats } from './components/Stats';
+import { RecentActivities } from './components/RecentActivities';
+import { UpcomingClasses } from './components/UpcomingClasses';
 
 export default function HomePage() {
-  const { user, isGuest } = useAuth();
+  const { user } = useAuth();
   const { t } = useTranslation();
   const userName = user?.displayName?.split(' ')[0] || 'Guest';
 
@@ -39,84 +18,11 @@ export default function HomePage() {
         <p className="text-muted-foreground">{t('dashboardGlance')}</p>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-3">
-        {stats.map((stat) => (
-          <Card key={stat.titleKey}>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">{t(stat.titleKey)}</CardTitle>
-              <stat.icon className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stat.value}</div>
-              <p className="text-xs text-muted-foreground">{t('sinceLastWeek').replace('{count}', '2')}</p>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+      <Stats t={t} />
 
       <div className="grid gap-8 md:grid-cols-2">
-        <Card>
-            <CardHeader>
-                <CardTitle className="font-headline flex items-center gap-2">
-                    <Calendar className="h-5 w-5" />
-                    {t('todaysClasses')}
-                </CardTitle>
-                <CardDescription>{t('todaysSchedule')}</CardDescription>
-            </CardHeader>
-            <CardContent>
-                <ul className="space-y-3">
-                    <li className="flex items-center gap-4">
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                            <Clock className="h-4 w-4" />
-                            <span>10:00 AM</span>
-                        </div>
-                        <p className="font-semibold">Maths - Grade 8</p>
-                    </li>
-                    <li className="flex items-center gap-4">
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                            <Clock className="h-4 w-4" />
-                            <span>11:30 AM</span>
-                        </div>
-                        <p className="font-semibold">Science - Grade 6</p>
-                    </li>
-                     <li className="flex items-center gap-4">
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                            <Clock className="h-4 w-4" />
-                            <span>02:00 PM</span>
-                        </div>
-                        <p className="font-semibold">English - Grade 7</p>
-                    </li>
-                </ul>
-            </CardContent>
-        </Card>
-        <Card>
-            <CardHeader>
-                <CardTitle className="font-headline">{t('recentlyGenerated')}</CardTitle>
-                <CardDescription>{t('recentCreations')}</CardDescription>
-            </CardHeader>
-            <CardContent>
-                 <Table>
-                    <TableHeader>
-                        <TableRow>
-                        <TableHead>{t('type')}</TableHead>
-                        <TableHead>{t('title')}</TableHead>
-                        <TableHead>{t('date')}</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {recentItems.map((item) => (
-                        <TableRow key={item.title}>
-                            <TableCell>
-                                <Badge variant={item.type === 'Lesson Plan' ? 'default' : item.type === 'Assessment' ? 'secondary' : item.type === 'Story' ? 'outline' : 'destructive'}>{item.type}</Badge>
-                            </TableCell>
-                            <TableCell className="font-medium">{item.title}</TableCell>
-                            <TableCell className="text-muted-foreground">{item.date}</TableCell>
-                        </TableRow>
-                        ))}
-                    </TableBody>
-                </Table>
-            </CardContent>
-        </Card>
+        <UpcomingClasses t={t} />
+        <RecentActivities t={t} />
       </div>
     </div>
   );
